@@ -83,6 +83,19 @@ bool SsiProviderServer::Init(XrdSsiLogger* logP,  XrdSsiCluster* clsP,
 
     lsst::qserv::xrdsvc::XrdName x;
 
+    if (argc != 2) {
+        LOGS( _log, LOG_LVL_TRACE, "argc: " << argc);
+        LOGS( _log, LOG_LVL_ERROR, "Uncorrect xrdssi configuration, launch \
+            xrootd with option '-+xrdssi /path/to/xrdssi/cfg/file'" << argc);
+        // TODO return with error
+    }
+
+    LOGS( _log, LOG_LVL_DEBUG, "Qserv xrdssi plugin configuration file: "
+        << argv[1]);
+
+    // TODO remove line below
+    LOGS( _log, LOG_LVL_DEBUG, "cfgFn" << cfgFn);
+
     // Establish our instance name (many different qservs may be running here).
     //
     _name = x.getName();
