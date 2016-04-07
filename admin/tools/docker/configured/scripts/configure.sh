@@ -36,8 +36,8 @@ Usage: `basename $0` [options]
     -h          this message
     -m          configure Qserv master, instead of worker by default
 
-  Configure a Qserv worker/master in a docker image.
-  Use XROOTD_MANAGER_HOSTNAME to set xrootd configuration.
+  Configure a Qserv worker/master in a docker image,
+  except Qserv master hostname parameter, set later at container execution.
 EOD
 }
 

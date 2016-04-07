@@ -1,19 +1,6 @@
 # Rename this file to env.sh and edit configuration parameters
 # env.sh is sourced by other scripts from the directory
 
-# Nodes names
-# ===========
-
-# Format for all node names
-HOSTNAME_FORMAT="qserv%g.domain.org"
-
-# Master id
-MASTER_ID=1
-
-# Workers range
-WORKER_FIRST_ID=2
-WORKER_LAST_ID=3
-
 # Image names
 # ===========
 
@@ -32,29 +19,33 @@ BRANCH=dev
 # Log directory location on docker host, optional
 # HOST_LOG_DIR=/qserv/log
 
+
+# Nodes names
+# ===========
+
+# Format for all node names
+HOSTNAME_FORMAT="qserv%g.domain.org"
+
+# Master id
+MASTER_ID=1
+
+# Workers range
+WORKER_FIRST_ID=2
+WORKER_LAST_ID=3
+
+# Disjoint sequences of host names can
+# be set directly using variables below
+MASTER=$(printf "$HOSTNAME_FORMAT" "$MASTER_ID")    # Master hostname. Do not edit
+WORKERS=$(seq --format "$HOSTNAME_FORMAT" \
+    --separator=' ' "$WORKER_FIRST_ID" \
+    "$WORKER_LAST_ID")                              # Worker hostnames list. Do not edit
+
+
 # Advanced configuration
 # ======================
 
-# Return a hostname list
-# arg1: format of hostnames
-# arg2: id of first host
-# arg3: id of last host, optional
-printHostname () {
-    if [ -n "$3" ]; then
-		local_last="$3"
-	else
-	    local_last="$2"
-    fi
-    seq --format "$1" --separator=' ' "$2" "$local_last"
-}
-
-MASTER=$(printHostname "$HOSTNAME_FORMAT" \
-    "$MASTER_ID")                                   # Master hostname. Do not edit
-WORKERS=$(printHostname "$HOSTNAME_FORMAT" \
-	"$WORKER_FIRST_ID" "$WORKER_LAST_ID")			# Worker hostnames list. Do not edit
-
-MASTER_IMAGE="qserv/qserv:${BRANCH}_master"	        # Do not edit
+MASTER_IMAGE="qserv/qserv:${BRANCH}_master"         # Do not edit
 WORKER_IMAGE="qserv/qserv:${BRANCH}_worker"         # Do not edit
 
 
-CONTAINER_NAME=qserv                                 # Do not edit
+CONTAINER_NAME=qserv                                # Do not edit
