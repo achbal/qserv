@@ -29,8 +29,6 @@
 
 // Third-party headers
 #include "boost/lexical_cast.hpp"
-#include "boost/property_tree/ini_parser.hpp"
-#include "boost/property_tree/ptree.hpp"
 
 // LSST headers
 #include "lsst/log/Log.h"
@@ -38,14 +36,12 @@
 // Qserv headers
 #include "ccontrol/ConfigMap.h"
 #include "czar/MessageTable.h"
+#include "util/Config.h"
 #include "util/IterableFormatter.h"
 
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.czar.Czar");
-
-// read configuration file
-lsst::qserv::StringMap readConfig(std::string const& configPath);
 
 // parse KILL query, return thread ID or -1
 int parseKillQuery(std::string const& query);
@@ -61,8 +57,8 @@ namespace czar {
 
 // Constructors
 Czar::Czar(std::string const& configPath, std::string const& czarName)
-    : _czarName(czarName), _config(::readConfig(configPath)),
-      _resultConfig(::mysqlConfig(_config)), _idCounter(),
+    : _czarName(czarName), _config(lsst::qserv::util::Config(configPath)),
+      _resultConfig(::mysqlConfig(_config.getConfigMap())), _idCounter(),
       _uqFactory(), _clientToQuery(), _mutex() {
 
     // set id counter to milliseconds since the epoch, mod 1 year.
@@ -71,16 +67,16 @@ Czar::Czar(std::string const& configPath, std::string const& czarName)
     const int year = 60*60*24*365;
     _idCounter = uint64_t(tv.tv_sec % year)*1000 + tv.tv_usec/1000;
 
-    ccontrol::ConfigMap cm(_config);
+    ccontrol::ConfigMap cm(_config.getConfigMap());
     std::string logConfig = cm.get("log.logConfig", "", "");
     if (not logConfig.empty()) {
         LOG_CONFIG(logConfig);
     }
 
     LOGS(_log, LOG_LVL_INFO, "creating czar instance with name " << czarName);
-    LOGS(_log, LOG_LVL_INFO, "czar config: " << util::printable(_config));
+    LOGS(_log, LOG_LVL_INFO, "czar config: " << _config);
 
-    _uqFactory.reset(new ccontrol::UserQueryFactory(_config, _czarName));
+    _uqFactory.reset(new ccontrol::UserQueryFactory(_config.getConfigMap(), _czarName));
 }
 
 SubmitResult
@@ -238,30 +234,6 @@ Czar::killQuery(std::string const& query, std::string const& clientId) {
 }}} // namespace lsst::qserv::czar
 
 namespace {
-
-// read configuration file
-lsst::qserv::StringMap
-readConfig(std::string const& configPath) {
-    using boost::property_tree::ini_parser::read_ini;
-    using boost::property_tree::ptree;
-
-    // read it into a ptree
-    ptree pt;
-    read_ini(configPath, pt);
-
-    // flatten
-    lsst::qserv::StringMap config;
-    for (auto& sectionPair: pt) {
-        auto& section = sectionPair.first;
-        for (auto& itemPair: sectionPair.second) {
-            auto& item = itemPair.first;
-            auto& value = itemPair.second.data();
-            config.insert(std::make_pair(section + "." + item, value));
-        }
-    }
-
-    return config;
-}
 
 int
 parseKillQuery(std::string const& aQuery) {

@@ -29,6 +29,10 @@
 #include <memory>
 #include <string>
 
+
+#include "boost/property_tree/ini_parser.hpp"
+#include "boost/property_tree/ptree.hpp"
+
 // Qserv headers
 #include "global/stringTypes.h"
 
