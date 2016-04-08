@@ -73,7 +73,7 @@ public:
     std::string get(std::string const& key, std::string const& defaultValue = "") const;
 
     /// @return the typed value for a key, defaulting to defaultValue
-    int getInt(std::string const& key, int const& defaultValue) const;
+    int getInt(std::string const& key, int const& defaultValue = 0) const;
 
     const lsst::qserv::StringMap& getConfigMap() const {
         return _configMap;

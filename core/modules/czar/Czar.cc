@@ -75,7 +75,7 @@ Czar::Czar(std::string const& configPath, std::string const& czarName)
     LOGS(_log, LOG_LVL_INFO, "Creating czar instance with name " << czarName);
     LOGS(_log, LOG_LVL_DEBUG, "Czar config: " << _config);
 
-    _uqFactory.reset(new ccontrol::UserQueryFactory(_config.getConfigMap(), _czarName));
+    _uqFactory.reset(new ccontrol::UserQueryFactory(_config, _czarName));
 }
 
 SubmitResult
@@ -122,8 +122,15 @@ Czar::submitQuery(std::string const& query,
     }
 
     // make new UserQuery
-    ccontrol::ConfigMap cm(hints);
-    std::string defDb = cm.get("db", "Failed to find default database, using empty string", "");
+    std::string defDb;
+    hintIter = hints.find("db");
+    if (hintIter != hints.end()) {
+        defDb = hintIter->second;
+    }
+    else {
+        LOGS(_log, LOG_LVL_DEBUG, "Failed to find default database, using empty string");
+        defDb = "";
+    }
     ccontrol::UserQuery::Ptr uq;
     {
         std::lock_guard<std::mutex> lock(_mutex);

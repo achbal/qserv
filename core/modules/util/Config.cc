@@ -71,7 +71,7 @@ std::string Config::get(std::string const& key,
     if(i != _configMap.end()) {
         return i->second;
     } else {
-        LOGS( _log, LOG_LVL_WARN, "[" << key << "] key not found, using default value: " << defaultValue);
+        LOGS( _log, LOG_LVL_WARN, "[" << key << "] key not found, using default value: \"" << defaultValue << "\"");
         return defaultValue;
     }
 }
@@ -80,8 +80,10 @@ int Config::getInt(std::string const& key, int const& defaultValue) const {
     StringMap::const_iterator i = _configMap.find(key);
     if (i != _configMap.end()) {
         return boost::lexical_cast<int>(i->second);
+    } else {
+        LOGS( _log, LOG_LVL_WARN, "[" << key << "] key not found, using default value: \"" << defaultValue << "\"");
+        return defaultValue;
     }
-    return defaultValue;
 }
 
 

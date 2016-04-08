@@ -52,6 +52,7 @@
 #include "qproc/SecondaryIndex.h"
 #include "rproc/InfileMerger.h"
 #include "sql/SqlConnection.h"
+#include "util/Config.h"
 
 namespace {
 LOG_LOGGER _log = LOG_GET("lsst.qserv.ccontrol.UserQueryFactory");
@@ -66,7 +67,7 @@ namespace ccontrol {
 class UserQueryFactory::Impl {
 public:
 
-    Impl(StringMap const& config);
+    Impl(util::Config const& config);
 
     /// State shared between UserQueries
     qdisp::Executive::Config::Ptr executiveConfig;
@@ -79,9 +80,9 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////
-UserQueryFactory::UserQueryFactory(StringMap const& m,
+UserQueryFactory::UserQueryFactory(util::Config const& config,
                                    std::string const& czarName)
-    :  _impl(std::make_shared<Impl>(m)) {
+    :  _impl(std::make_shared<Impl>(config)) {
 
     ::putenv((char*)"XRDDEBUG=1");
 
@@ -156,28 +157,23 @@ UserQueryFactory::newUserQuery(std::string const& query,
     }
 }
 
-UserQueryFactory::Impl::Impl(StringMap const& m) {
+UserQueryFactory::Impl::Impl(util::Config const& config) {
 
-    ConfigMap cm(m);
     /// localhost:1094 is the most reasonable default, even though it is
     /// the wrong choice for all but small developer installations.
-    std::string serviceUrl = cm.get(
+    std::string serviceUrl = config.get(
         "frontend.xrootd", // czar.serviceUrl
-        "WARNING! No xrootd spec. Using localhost:1094",
         "localhost:1094");
     executiveConfig = std::make_shared<qdisp::Executive::Config>(serviceUrl);
     // This should be overriden by the installer properly.
-    infileMergerConfigTemplate.socket = cm.get(
+    infileMergerConfigTemplate.socket = config.get(
         "resultdb.unix_socket",
-        "Error, resultdb.unix_socket not found. Using /u1/local/mysql.sock.",
         "/u1/local/mysql.sock");
-    infileMergerConfigTemplate.user = cm.get(
+    infileMergerConfigTemplate.user = config.get(
         "resultdb.user",
-        "Error, resultdb.user not found. Using qsmaster.",
         "qsmaster");
-    infileMergerConfigTemplate.targetDb = cm.get(
+    infileMergerConfigTemplate.targetDb = config.get(
         "resultdb.db",
-        "Error, resultdb.db not found. Using qservResult.",
         "qservResult");
     mysql::MySqlConfig mc;
     mc.username = infileMergerConfigTemplate.user;
@@ -190,41 +186,20 @@ UserQueryFactory::Impl::Impl(StringMap const& m) {
 
     // get config parameters for qmeta db
     mysql::MySqlConfig qmetaConfig;
-    qmetaConfig.hostname = cm.get(
-        "qmeta.host",
-        "Error, qmeta.host not found. Using empty host name.",
-        "");
-    qmetaConfig.port = cm.getTyped<unsigned>(
-        "qmeta.port",
-        "Error, qmeta.port not found. Using 0 for port.",
-        0U);
-    qmetaConfig.username = cm.get(
-        "qmeta.user",
-        "Error, qmeta.user not found. Using qsmaster.",
-        "qsmaster");
-    qmetaConfig.password = cm.get(
-        "qmeta.passwd",
-        "Error, qmeta.passwd not found. Using empty string.",
-        "");
-    qmetaConfig.socket = cm.get(
-        "qmeta.unix_socket",
-        "Error, qmeta.unix_socket not found. Using empty string.",
-        "");
-    qmetaConfig.dbName = cm.get(
-        "qmeta.db",
-        "Error, qmeta.db not found. Using qservMeta.",
-        "qservMeta");
+    qmetaConfig.hostname = config.get("qmeta.host");
+    qmetaConfig.port = config.getInt("qmeta.port");
+    qmetaConfig.username = config.get( "qmeta.user", "qsmaster");
+    qmetaConfig.password = config.get("qmeta.passwd");
+    qmetaConfig.socket = config.get("qmeta.unix_socket");
+    qmetaConfig.dbName = config.get("qmeta.db", "qservMeta");
     queryMetadata = std::make_shared<qmeta::QMetaMysql>(qmetaConfig);
 
     // empty chunk path
-    std::string emptyChunkPath = cm.get(
-        "partitioner.emptyChunkPath",
-        "Error, missing path for Empty chunk file, using '.'.",
-        ".");
+    std::string emptyChunkPath = config.get("partitioner.emptyChunkPath",".");
 
     // find all css.* parameters and copy to new map (dropping css.)
     StringMap cssConfig;
-    for (auto& kv: m) {
+    for (auto& kv: config.getConfigMap()) {
         if (kv.first.compare(0, 4, "css.") == 0) {
             cssConfig.insert(std::make_pair(std::string(kv.first, 4), kv.second));
         }
