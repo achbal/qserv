@@ -28,6 +28,7 @@
 #include <sstream>
 
 // Third-party headers
+#include "boost/lexical_cast.hpp"
 #include "boost/property_tree/ini_parser.hpp"
 #include "boost/property_tree/ptree.hpp"
 
@@ -65,13 +66,22 @@ Config::Config(std::string const& configFilePath) {
 }
 
 std::string Config::get(std::string const& key,
-                        std::string const& defaultValue) {
+                        std::string const& defaultValue) const {
     StringMap::const_iterator i = _configMap.find(key);
     if(i != _configMap.end()) {
         return i->second;
     } else {
+        LOGS( _log, LOG_LVL_WARN, "[" << key << "] key not found, using default value: " << defaultValue);
         return defaultValue;
     }
+}
+
+int Config::getInt(std::string const& key, int const& defaultValue) const {
+    StringMap::const_iterator i = _configMap.find(key);
+    if (i != _configMap.end()) {
+        return boost::lexical_cast<int>(i->second);
+    }
+    return defaultValue;
 }
 
 

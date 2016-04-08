@@ -70,8 +70,10 @@ public:
      * @params defaultValue
      * @return the string value for a key, defaulting to defaultValue
      */
+    std::string get(std::string const& key, std::string const& defaultValue = "") const;
 
-    std::string get(std::string const& key, std::string const& defaultValue);
+    /// @return the typed value for a key, defaulting to defaultValue
+    int getInt(std::string const& key, int const& defaultValue) const;
 
     const lsst::qserv::StringMap& getConfigMap() const {
         return _configMap;

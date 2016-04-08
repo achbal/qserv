@@ -47,7 +47,7 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.czar.Czar");
 int parseKillQuery(std::string const& query);
 
 // make mysql config object from config map
-lsst::qserv::mysql::MySqlConfig mysqlConfig(lsst::qserv::StringMap const& config);
+lsst::qserv::mysql::MySqlConfig mysqlConfig(lsst::qserv::util::Config const& config);
 
 } // anonymous namespace
 
@@ -58,7 +58,7 @@ namespace czar {
 // Constructors
 Czar::Czar(std::string const& configPath, std::string const& czarName)
     : _czarName(czarName), _config(lsst::qserv::util::Config(configPath)),
-      _resultConfig(::mysqlConfig(_config.getConfigMap())), _idCounter(),
+      _resultConfig(::mysqlConfig(_config)), _idCounter(),
       _uqFactory(), _clientToQuery(), _mutex() {
 
     // set id counter to milliseconds since the epoch, mod 1 year.
@@ -67,14 +67,13 @@ Czar::Czar(std::string const& configPath, std::string const& czarName)
     const int year = 60*60*24*365;
     _idCounter = uint64_t(tv.tv_sec % year)*1000 + tv.tv_usec/1000;
 
-    ccontrol::ConfigMap cm(_config.getConfigMap());
-    std::string logConfig = cm.get("log.logConfig", "", "");
+    std::string logConfig = _config.get("log.logConfig");
     if (not logConfig.empty()) {
         LOG_CONFIG(logConfig);
     }
 
-    LOGS(_log, LOG_LVL_INFO, "creating czar instance with name " << czarName);
-    LOGS(_log, LOG_LVL_INFO, "czar config: " << _config);
+    LOGS(_log, LOG_LVL_INFO, "Creating czar instance with name " << czarName);
+    LOGS(_log, LOG_LVL_DEBUG, "Czar config: " << _config);
 
     _uqFactory.reset(new ccontrol::UserQueryFactory(_config.getConfigMap(), _czarName));
 }
@@ -264,36 +263,16 @@ parseKillQuery(std::string const& aQuery) {
 
 // make mysql config object from config map
 lsst::qserv::mysql::MySqlConfig
-mysqlConfig(lsst::qserv::StringMap const& config) {
-
-    lsst::qserv::ccontrol::ConfigMap cm(config);
+mysqlConfig(lsst::qserv::util::Config const& config) {
 
     lsst::qserv::mysql::MySqlConfig mysqlConfig;
 
-    mysqlConfig.hostname = cm.get(
-        "resultdb.host",
-        "Error, resultdb.host not found. Using empty host name.",
-        "");
-    mysqlConfig.port = cm.getTyped<unsigned>(
-        "resultdb.port",
-        "Error, resultdb.port not found. Using 0 for port.",
-        0U);
-    mysqlConfig.username = cm.get(
-        "resultdb.user",
-        "Error, resultdb.user not found. Using qsmaster.",
-        "qsmaster");
-    mysqlConfig.password = cm.get(
-        "resultdb.passwd",
-        "Error, resultdb.passwd not found. Using empty string.",
-        "");
-    mysqlConfig.socket = cm.get(
-        "resultdb.unix_socket",
-        "Error, resultdb.unix_socket not found. Using empty string.",
-        "");
-    mysqlConfig.dbName = cm.get(
-        "resultdb.db",
-        "Error, resultdb.db not found. Using qservMeta.",
-        "qservResult");
+    mysqlConfig.hostname = config.get("resultdb.host");
+    mysqlConfig.port = config.getInt("resultdb.port",0);
+    mysqlConfig.username = config.get("resultdb.user", "qsmaster");
+    mysqlConfig.password = config.get("resultdb.passwd");
+    mysqlConfig.socket = config.get("resultdb.unix_socket");
+    mysqlConfig.dbName = config.get("resultdb.db","qservResult");
 
     return mysqlConfig;
 }
