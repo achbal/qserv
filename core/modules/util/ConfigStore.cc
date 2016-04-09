@@ -22,9 +22,8 @@
  */
 
 // Class header
-#include "util/Config.h"
+#include "ConfigStore.h"
 
-// System headers
 #include <sstream>
 
 // Third-party headers
@@ -48,7 +47,7 @@ namespace qserv {
 namespace util {
 
 
-Config::Config(std::string const& configFilePath) {
+void ConfigStore::parseFile(std::string const& configFilePath) {
 
     // read it into a ptree
     boost::property_tree::ptree pt;
@@ -65,7 +64,7 @@ Config::Config(std::string const& configFilePath) {
     }
 }
 
-std::string Config::get(std::string const& key,
+std::string ConfigStore::get(std::string const& key,
                         std::string const& defaultValue) const {
     StringMap::const_iterator i = _configMap.find(key);
     if(i != _configMap.end()) {
@@ -76,7 +75,7 @@ std::string Config::get(std::string const& key,
     }
 }
 
-int Config::getInt(std::string const& key, int const& defaultValue) const {
+int ConfigStore::getInt(std::string const& key, int const& defaultValue) const {
     StringMap::const_iterator i = _configMap.find(key);
     if (i != _configMap.end()) {
         return boost::lexical_cast<int>(i->second);
@@ -93,7 +92,7 @@ int Config::getInt(std::string const& key, int const& defaultValue) const {
  * @param config
  * @return an output stream
  */
-std::ostream& operator<<(std::ostream &out, Config const& config) {
+std::ostream& operator<<(std::ostream &out, ConfigStore const& config) {
     for(auto elem : config._configMap)
     {
        out << elem.first << ": " << elem.second <<"\n";

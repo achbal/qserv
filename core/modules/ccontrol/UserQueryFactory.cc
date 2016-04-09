@@ -52,7 +52,7 @@
 #include "qproc/SecondaryIndex.h"
 #include "rproc/InfileMerger.h"
 #include "sql/SqlConnection.h"
-#include "util/Config.h"
+#include "util/ConfigStore.h"
 
 namespace {
 LOG_LOGGER _log = LOG_GET("lsst.qserv.ccontrol.UserQueryFactory");
@@ -67,7 +67,7 @@ namespace ccontrol {
 class UserQueryFactory::Impl {
 public:
 
-    Impl(util::Config const& config);
+    Impl(util::ConfigStore const& config);
 
     /// State shared between UserQueries
     qdisp::Executive::Config::Ptr executiveConfig;
@@ -80,7 +80,7 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////
-UserQueryFactory::UserQueryFactory(util::Config const& config,
+UserQueryFactory::UserQueryFactory(util::ConfigStore const& config,
                                    std::string const& czarName)
     :  _impl(std::make_shared<Impl>(config)) {
 
@@ -157,7 +157,7 @@ UserQueryFactory::newUserQuery(std::string const& query,
     }
 }
 
-UserQueryFactory::Impl::Impl(util::Config const& config) {
+UserQueryFactory::Impl::Impl(util::ConfigStore const& config) {
 
     /// localhost:1094 is the most reasonable default, even though it is
     /// the wrong choice for all but small developer installations.

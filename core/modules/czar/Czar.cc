@@ -36,7 +36,7 @@
 // Qserv headers
 #include "ccontrol/ConfigMap.h"
 #include "czar/MessageTable.h"
-#include "util/Config.h"
+#include "util/ConfigStore.h"
 #include "util/IterableFormatter.h"
 
 namespace {
@@ -47,7 +47,7 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.czar.Czar");
 int parseKillQuery(std::string const& query);
 
 // make mysql config object from config map
-lsst::qserv::mysql::MySqlConfig mysqlConfig(lsst::qserv::util::Config const& config);
+lsst::qserv::mysql::MySqlConfig mysqlConfig(lsst::qserv::util::ConfigStore const& config);
 
 } // anonymous namespace
 
@@ -57,7 +57,7 @@ namespace czar {
 
 // Constructors
 Czar::Czar(std::string const& configPath, std::string const& czarName)
-    : _czarName(czarName), _config(lsst::qserv::util::Config(configPath)),
+    : _czarName(czarName), _config(lsst::qserv::util::ConfigStore(configPath)),
       _resultConfig(::mysqlConfig(_config)), _idCounter(),
       _uqFactory(), _clientToQuery(), _mutex() {
 
@@ -270,7 +270,7 @@ parseKillQuery(std::string const& aQuery) {
 
 // make mysql config object from config map
 lsst::qserv::mysql::MySqlConfig
-mysqlConfig(lsst::qserv::util::Config const& config) {
+mysqlConfig(lsst::qserv::util::ConfigStore const& config) {
 
     lsst::qserv::mysql::MySqlConfig mysqlConfig;
 

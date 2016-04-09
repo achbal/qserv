@@ -31,6 +31,7 @@
 #include <sstream>
 #include <sys/types.h>
 
+#include "../util/ConfigStore.h"
 // Third party headers
 #include "XrdSsi/XrdSsiCluster.hh"
 #include "XrdSsi/XrdSsiLogger.hh"
@@ -85,16 +86,15 @@ bool SsiProviderServer::Init(XrdSsiLogger* logP,  XrdSsiCluster* clsP,
 
     if (argc != 2) {
         LOGS( _log, LOG_LVL_TRACE, "argc: " << argc);
-        LOGS( _log, LOG_LVL_ERROR, "Uncorrect xrdssi configuration, launch \
-            xrootd with option '-+xrdssi /path/to/xrdssi/cfg/file'" << argc);
-        // TODO return with error
+        LOGS( _log, LOG_LVL_FATAL, "Uncorrect xrdssi configuration, launch \
+            xrootd with option '-+xrdssi /path/to/xrdssi/cfg/file'");
+        exit(EXIT_FAILURE);
     }
 
     LOGS( _log, LOG_LVL_DEBUG, "Qserv xrdssi plugin configuration file: "
         << argv[1]);
 
-    // TODO remove line below
-    LOGS( _log, LOG_LVL_DEBUG, "cfgFn" << cfgFn);
+    //util::ConfigStore config(argv[1]);
 
     // Establish our instance name (many different qservs may be running here).
     //

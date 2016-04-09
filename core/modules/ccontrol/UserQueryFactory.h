@@ -41,7 +41,7 @@
 // Local headers
 #include "ccontrol/UserQuery.h"
 #include "global/stringTypes.h"
-#include "util/Config.h"
+#include "util/ConfigStore.h"
 
 namespace lsst {
 namespace qserv {
@@ -54,7 +54,7 @@ namespace ccontrol {
 class UserQueryFactory : private boost::noncopyable {
 public:
 
-    UserQueryFactory(util::Config const& config,
+    UserQueryFactory(util::ConfigStore const& config,
                      std::string const& czarName);
 
     /// @param query:       Query text

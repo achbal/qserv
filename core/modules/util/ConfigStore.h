@@ -32,8 +32,8 @@
  * @author Fabrice Jammes, IN2P3/SLAC
  */
 
-#ifndef LSST_QSERV_UTIL_CONFIG_H_
-#define LSST_QSERV_UTIL_CONFIG_H_
+#ifndef LSST_QSERV_UTIL_CONFIGSTORE_H_
+#define LSST_QSERV_UTIL_CONFIGSTORE_H_
 
 // System headers
 #include <string>
@@ -48,14 +48,24 @@ namespace util {
 /** @brief Manage Qserv configuration
  *
  */
-class Config {
+class ConfigStore {
 public:
+
+    // TODO remove it
+    static ConfigStore& getInstance() {
+        static ConfigStore instance;
+        return instance;
+    }
 
     /** Build an object from a configuration file
      *
      * @param configFilePath: path to Qserv configuration file
      */
-    Config(std::string const& configFilePath);
+    ConfigStore(std::string const& configFilePath) {
+        parseFile(configFilePath);
+    };
+
+    void parseFile(std::string const& configFilePath);
 
     /** Overload output operator for current class
      *
@@ -63,7 +73,7 @@ public:
      * @param config
      * @return an output stream
      */
-    friend std::ostream& operator<<(std::ostream &out, Config const& config);
+    friend std::ostream& operator<<(std::ostream &out, ConfigStore const& config);
 
     /** Get value for a configuration key
      * @param key configuration key
@@ -80,6 +90,8 @@ public:
     }
 
 private:
+    ConfigStore(){};
+    ConfigStore& operator=(const ConfigStore&);
 
     StringMap _configMap;
 
@@ -87,4 +99,4 @@ private:
 
 }}} // namespace lsst::qserv::util
 
-#endif /* LSST_QSERV_UTIL_CONFIG_H_ */
+#endif /* LSST_QSERV_UTIL_CONFIGSTORE_H_ */
