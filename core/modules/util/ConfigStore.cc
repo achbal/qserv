@@ -26,6 +26,10 @@
 
 #include <sstream>
 
+// Qserv headers
+#include "util/ConfigStoreError.h"
+#include "util/IterableFormatter.h"
+
 // Third-party headers
 #include "boost/lexical_cast.hpp"
 #include "boost/property_tree/ini_parser.hpp"
@@ -64,8 +68,18 @@ void ConfigStore::parseFile(std::string const& configFilePath) {
     }
 }
 
+std::string ConfigStore::get(std::string const& key) const {
+    StringMap::const_iterator i = _configMap.find(key);
+    if(i != _configMap.end()) {
+        return i->second;
+    } else {
+        LOGS( _log, LOG_LVL_WARN, "[" << key << "] does not exist in configuration");
+        throw KeyNotFoundError(key);
+    }
+}
+
 std::string ConfigStore::get(std::string const& key,
-                        std::string const& defaultValue) const {
+                             std::string const& defaultValue) const {
     StringMap::const_iterator i = _configMap.find(key);
     if(i != _configMap.end()) {
         return i->second;
@@ -93,10 +107,7 @@ int ConfigStore::getInt(std::string const& key, int const& defaultValue) const {
  * @return an output stream
  */
 std::ostream& operator<<(std::ostream &out, ConfigStore const& config) {
-    for(auto elem : config._configMap)
-    {
-       out << elem.first << ": " << elem.second <<"\n";
-    }
+    out << util::printable(config._configMap);
     return out;
 }
 

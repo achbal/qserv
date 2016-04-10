@@ -25,9 +25,9 @@
  *
  * @ingroup util
  *
- * @brief Manage Qserv configuration
+ * @brief Provide common configuration management framework
  *
- * Allow to read czar and xrdssi plugin configuration
+ * Manage czar and worker (xrdssi plugin) configuration files
  *
  * @author Fabrice Jammes, IN2P3/SLAC
  */
@@ -77,10 +77,17 @@ public:
 
     /** Get value for a configuration key
      * @param key configuration key
+     * @return the string value for a key
+     * @throw a ConfigError exception if key is not found
+     */
+    std::string get(std::string const& key) const;
+
+    /** Get value for a configuration key
+     * @param key configuration key
      * @params defaultValue
      * @return the string value for a key, defaulting to defaultValue
      */
-    std::string get(std::string const& key, std::string const& defaultValue = "") const;
+    std::string get(std::string const& key, std::string const& defaultValue) const;
 
     /// @return the typed value for a key, defaulting to defaultValue
     int getInt(std::string const& key, int const& defaultValue = 0) const;

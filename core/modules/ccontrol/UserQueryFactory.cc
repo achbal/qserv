@@ -167,8 +167,7 @@ UserQueryFactory::Impl::Impl(util::ConfigStore const& config) {
     executiveConfig = std::make_shared<qdisp::Executive::Config>(serviceUrl);
     // This should be overriden by the installer properly.
     infileMergerConfigTemplate.socket = config.get(
-        "resultdb.unix_socket",
-        "/u1/local/mysql.sock");
+        "resultdb.unix_socket");
     infileMergerConfigTemplate.user = config.get(
         "resultdb.user",
         "qsmaster");
@@ -186,11 +185,11 @@ UserQueryFactory::Impl::Impl(util::ConfigStore const& config) {
 
     // get config parameters for qmeta db
     mysql::MySqlConfig qmetaConfig;
-    qmetaConfig.hostname = config.get("qmeta.host");
-    qmetaConfig.port = config.getInt("qmeta.port");
+    qmetaConfig.hostname = config.get("qmeta.host", "");
+    qmetaConfig.port = config.getInt("qmeta.port", 3306);
     qmetaConfig.username = config.get( "qmeta.user", "qsmaster");
-    qmetaConfig.password = config.get("qmeta.passwd");
-    qmetaConfig.socket = config.get("qmeta.unix_socket");
+    qmetaConfig.password = config.get("qmeta.passwd", "");
+    qmetaConfig.socket = config.get("qmeta.unix_socket", "");
     qmetaConfig.dbName = config.get("qmeta.db", "qservMeta");
     queryMetadata = std::make_shared<qmeta::QMetaMysql>(qmetaConfig);
 
