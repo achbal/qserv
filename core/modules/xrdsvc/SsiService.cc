@@ -88,10 +88,6 @@ SsiService::SsiService(XrdSsiLogger* log) {
     _initInventory();
     _setupResultPath();
 
-    if (!_setupScratchDb()) {
-        throw wconfig::ConfigError("Couldn't setup scratch db");
-    }
-
     auto const& config = wconfig::getConfig();
     auto cfgMemMan = config.getString("QSW_MEMMAN");
     memman::MemMan::Ptr memMan;
@@ -190,32 +186,6 @@ void SsiService::_configure() {
         LOGS(_log, LOG_LVL_FATAL, msg);
         throw wconfig::ConfigError(msg);
     }
-}
-
-/// Cleanup scratch space and scratch dbs.
-/// This means that scratch db and scratch dirs CANNOT be shared among
-/// qserv workers. Take heed.
-/// @return true if cleanup was successful, false otherwise.
-bool SsiService::_setupScratchDb() {
-    std::shared_ptr<sql::SqlConnection> conn = makeSqlConnection();
-    if (!conn) {
-        return false;
-    }
-    sql::SqlErrorObject errObj;
-    std::string dbName = wconfig::getConfig().getString("scratchDb");
-    LOGS(_log, LOG_LVL_DEBUG, "Cleaning up scratchDb: " << dbName);
-    if (!conn->dropDb(dbName, errObj, false)) {
-        LOGS(_log, LOG_LVL_ERROR, "Cfg error! couldn't drop scratchDb: "
-             << dbName << ", error: " << errObj.errMsg());
-        return false;
-    }
-    errObj.reset();
-    if (!conn->createDb(dbName, errObj, true)) {
-        LOGS(_log, LOG_LVL_ERROR, "Cfg error! couldn't create scratchDb: "
-             << dbName << ", error: " << errObj.errMsg());
-        return false;
-    }
-    return true;
 }
 
 

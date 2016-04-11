@@ -1,24 +1,21 @@
-
-[frontend]
-
-xrootd={{XROOTD_MANAGER_HOST}}:{{XROOTD_PORT}}
-
-#[mgmtdb]
-#db=qservMeta
-# Steal resultdb settings for now.
-
-[css]
-technology=mysql
+[mysql]
 hostname =
 port =
+# Username for mysql connections
 username = qsmaster
 password =
 database = qservCssData
+# MySQL socket file path for db connections
 socket = {{MYSQLD_SOCK}}
 
-[resultdb]
-passwd =
-db=qservResult
+# Number of in-flight query threads allowed
+numthread = 4
+
+[memman]
+# MemMan class to use for managing memory for tables
+class =
+# Memory available for locking tables
+memory = qservResult
 unix_socket={{MYSQLD_SOCK}}
 host=
 user=qsmaster

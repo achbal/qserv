@@ -38,15 +38,13 @@ fi
 
 XROOTD_CONFIG="${QSERV_RUN_DIR}/etc/lsp.cf"
 # Add configuration for xrdssi, used only on Qserv workers, not Czar
-XRDSSI_CONFIG="${QSERV_RUN_DIR}/etc/xrdssi.cf"
+XRDSSI_CONFIG="${QSERV_RUN_DIR}/etc/xrdssi.cnf"
 XROOTD_INSTANCE_NAME="worker"
 
 PID_DIR=${QSERV_PID_DIR}/${XROOTD_INSTANCE_NAME}
 LOG_DIR=${QSERV_LOG_DIR}
 
 export QSW_DBSOCK="${MYSQLD_SOCK}"
-QSW_SCRATCHPATH="${QSERV_RUN_DIR}/tmp"
-QSW_SCRATCHDB="qservScratch"
 
 # MemMan configuration
 export QSW_MEMMAN="MemManReal"
