@@ -20,6 +20,7 @@ Script performs these tasks:
 # -------------------------------
 import logging
 import os
+import subprocess
 import sys
 import time
 import warnings
@@ -76,18 +77,17 @@ def nova_servers_create(instance_id):
 
     packages:
     - docker
-    - epel-release
+    #- epel-release
 
     runcmd:
     # nss-mdns is provided by epel-release
     # so it can not be installed with 'packages' directive
-    - [ "yum", "-y", "update" ]
-    - [ "yum", "-y", "install", "nss-mdns" ]
-    - [ "/bin/systemctl", "start",  "avahi-daemon.service" ]
+    #- [ "yum", "-y", "update" ]
+    #- [ "yum", "-y", "install", "nss-mdns" ]
+    #- [ "/bin/systemctl", "start",  "avahi-daemon.service" ]
     - [ "/bin/systemctl", "--no-block", "start",  "docker.service" ]
-    - [ "hostname", "{hostname}" ]
+    - [ "hostname", "{hostname}.local" ]
 
-    manage_etc_hosts: true
     package_upgrade: true
     package_reboot_if_required: true
     timezone: Europe/Paris
@@ -96,8 +96,6 @@ def nova_servers_create(instance_id):
     fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
     userdata = cloud_config_tpl.format(key=fpubkey.read(),
                                      hostname=instance_name)
-
-    #logging.debug("cloud-config.txt {}:".format(userdata))
 
     # Launch an instance from an image
     instance = nova.servers.create(name=instance_name, image=image,
@@ -181,7 +179,7 @@ def print_ssh_config(instances, floating_ip):
 
     ssh_config_extract = ""
     for instance in instances:
-        fixed_ip = instance.networks['petasky-net'][0]
+        fixed_ip = instance.networks['lsst'][0]
         ssh_config_extract += ssh_config_tpl.format(host=instance.name,
                                                     fixed_ip=fixed_ip,
                                                     floating_ip=floating_ip.ip)
@@ -192,6 +190,22 @@ def print_ssh_config(instances, floating_ip):
     f.write(ssh_config_extract)
     f.close()
 
+def update_etc_hosts():
+
+    hostfile_tpl = '''
+    {ip}   {host}   {host}.qservlocal
+    '''
+    hostfile=""
+    for instance in instances:
+        # Collect IP adresses
+        fixed_ip = instance.networks['lsst'][0]
+        hostfile += hostfile_tpl.format(host=instance.name, ip=fixed_ip)
+        logging.debug("hostfile.txt {}".format(hostfile))
+
+    for instance in instances:
+        # Update /etc/hosts on each machine
+        cmd='ssh -t -F ./ssh_config {host} "sudo echo \'{hostfile}\' >> /etc/hosts"'.format(host=instance.name,hostfile=hostfile)
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
 
 if __name__ == "__main__":
     try:
@@ -217,8 +231,8 @@ if __name__ == "__main__":
             sys.exit(2)
 
         # Find an image and a flavor to launch an instance
-        image = nova.images.find(name="CentOS 7")
-        flavor = nova.flavors.find(name="c1.medium")
+        image = nova.images.find(name="CentOS-7-x86_64-GenericCloud")
+        flavor = nova.flavors.find(name="m1.medium")
 
         # Create instances list
         instances = []
@@ -234,7 +248,7 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1,2):
+        for instance_id in range(1,3):
             worker_instance = nova_servers_create(instance_id)
             # Add workers to instances list
             instances.append(worker_instance)
@@ -242,6 +256,7 @@ if __name__ == "__main__":
         # Show ssh client config
         print_ssh_config(instances, floating_ip)
 
+        update_etc_hosts()
         #for instance in instances:
         #    nova_servers_delete(instance.name)
 
