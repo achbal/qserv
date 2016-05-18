@@ -39,7 +39,7 @@ def get_nova_creds():
     Extract the login information from the environment
     """
     d = {}
-    d['version'] = 2.4
+    d['version'] = 2
     d['username'] = os.environ['OS_USERNAME']
     d['api_key'] = os.environ['OS_PASSWORD']
     d['auth_url'] = os.environ['OS_AUTH_URL']
@@ -87,10 +87,13 @@ def nova_servers_create(instance_id):
     fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
     userdata = cloud_config_tpl.format(key=fpubkey.read(),
                                      hostname=instance_name)
+    net_id = ["fc77a88d-a9fb-47bb-a65d-39d1be7a7174"]
+    nics = [{"net-id": net_id, "v4-fixed-ip": ''}]
 
     # Launch an instance from an image
     instance = nova.servers.create(name=instance_name, image=image,
-            flavor=flavor, userdata=userdata, key_name=key)
+            flavor=flavor, userdata=userdata, key_name=key,
+            nics=nics)
     # Poll at 5 second intervals, until the status is no longer 'BUILD'
     status = instance.status
     while status == 'BUILD':
@@ -106,7 +109,7 @@ def manage_ssh_key():
     """
     Upload ssh public key
     """
-    logging.info('Manage ssh keys')
+    logging.info('Manage ssh keys: {}'.format(key))
     if nova.keypairs.findall(name=key):
         logging.debug('Remove previous ssh keys')
         nova.keypairs.delete(key=key)
@@ -216,6 +219,8 @@ if __name__ == "__main__":
 
         # Upload ssh public key
         key = "{}-qserv".format(creds['username'])
+        # Remove unsafe characters 
+        key = key.replace('.', '_')
         fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
         manage_ssh_key()
         fpubkey.close()
@@ -228,13 +233,20 @@ if __name__ == "__main__":
 
         # Find an image and a flavor to launch an instance
 
+        # CC-IN2P3
         #image_name = "CentOS-7-x86_64-GenericCloud"
         #flavor_name = "m1.medium"
         #network_name = "lsst"
 
+        # Petasky
         image_name = "CentOS 7"
         flavor_name = "c1.medium"
         network_name = "petasky-net"
+
+        # NCSA
+        image_name = "CentOS 7"
+        flavor_name = "m1.medium"
+        network_name = "LSST-net"
 
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
