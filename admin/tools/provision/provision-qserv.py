@@ -92,7 +92,6 @@ def nova_servers_create(instance_id):
     package_reboot_if_required: true
     timezone: Europe/Paris
     '''
-
     fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
     userdata = cloud_config_tpl.format(key=fpubkey.read(),
                                      hostname=instance_name)
@@ -120,7 +119,7 @@ def manage_ssh_key():
         logging.debug('Remove previous ssh keys')
         nova.keypairs.delete(key=key)
 
-    with open(os.path.expanduser('~/.ssh/id_rsa.pub')) as fpubkey:
+    with fpubkey:
         nova.keypairs.create(name=key, public_key=fpubkey.read())
 
 def get_floating_ip():
@@ -171,7 +170,7 @@ def print_ssh_config(instances, floating_ip):
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
     PasswordAuthentication no
-    ProxyCommand ssh -W %h:%p qserv@{floating_ip}
+    ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p qserv@{floating_ip}
     IdentityFile ~/.ssh/id_rsa
     IdentitiesOnly yes
     LogLevel FATAL
@@ -193,19 +192,22 @@ def print_ssh_config(instances, floating_ip):
 def update_etc_hosts():
 
     hostfile_tpl = '''
-    {ip}   {host}   {host}.qservlocal
-    '''
+    #{ip}   {host}   {host}.qservlocal
+    #'''
     hostfile=""
     for instance in instances:
         # Collect IP adresses
         fixed_ip = instance.networks['lsst'][0]
         hostfile += hostfile_tpl.format(host=instance.name, ip=fixed_ip)
-        logging.debug("hostfile.txt {}".format(hostfile))
+    logging.debug("hostfile.txt {}".format(hostfile))
 
-    for instance in instances:
+    #for instance in instances:
         # Update /etc/hosts on each machine
-        cmd='ssh -t -F ./ssh_config {host} "sudo echo \'{hostfile}\' >> /etc/hosts"'.format(host=instance.name,hostfile=hostfile)
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+    instance = instances[0]
+    cmd=['ssh', '-t', '-F', './ssh_config', instance.name,
+         'sudo sh -c "echo \'{hostfile}\' >> /etc/hosts"'.format(hostfile=hostfile)]
+    subprocess.check_output(cmd)
+
 
 if __name__ == "__main__":
     try:
@@ -222,7 +224,9 @@ if __name__ == "__main__":
 
         # Upload ssh public key
         key = "{}-qserv".format(creds['username'])
+        fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
         manage_ssh_key()
+        fpubkey.close()
 
         # Find a floating ip for gateway
         floating_ip = get_floating_ip()
@@ -248,7 +252,7 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1,3):
+        for instance_id in range(1,2):
             worker_instance = nova_servers_create(instance_id)
             # Add workers to instances list
             instances.append(worker_instance)
@@ -256,7 +260,9 @@ if __name__ == "__main__":
         # Show ssh client config
         print_ssh_config(instances, floating_ip)
 
+        # Modify /etc/hosts on each machine
         update_etc_hosts()
+
         #for instance in instances:
         #    nova_servers_delete(instance.name)
 
