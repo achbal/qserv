@@ -64,13 +64,13 @@ def nova_servers_create(instance_id):
     """
     Boot an instance from an image and check status
     """
-    instance_name = "{0}-qserv-{1}".format(creds['username'], instance_id)
+    username = creds['username'].replace('.', '')
+    instance_name = "{0}-qserv-{1}".format(username, instance_id)
     logging.info("Launch an instance {}".format(instance_name))
 
     # cloud config
     cloud_config_tpl = '''
     #cloud-config
-    #fqdn: {hostname}.local
 
     groups:
     - docker
@@ -102,7 +102,7 @@ def nova_servers_create(instance_id):
 
     # Launch an instance from an image
     instance = nova.servers.create(name=instance_name, image=image,
-            flavor=flavor, userdata=userdata, key_name=key)
+            flavor=flavor, userdata=userdata, key_name=key, nics=nics)
     # Poll at 5 second intervals, until the status is no longer 'BUILD'
     status = instance.status
     while status == 'BUILD':
@@ -183,7 +183,7 @@ def print_ssh_config(instances, floating_ip):
 
 def update_etc_hosts():
 
-    hostfile_tpl = "{ip}   {host}   {host}.qservlocal\n"
+    hostfile_tpl = "{ip}    {host}\n"
 
     hostfile=""
     for instance in instances:
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         # Upload ssh public key
         key = "{}-qserv".format(creds['username'])
         # Remove unsafe characters
-        #key = key.replace('.', '_')
+        key = key.replace('.', '')
         fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
         public_key=fpubkey.read()
         manage_ssh_key()
@@ -230,20 +230,24 @@ if __name__ == "__main__":
 
         # Find an image and a flavor to launch an instance
 
+        nics = []
+
         # CC-IN2P3
         # image_name = "CentOS-7-x86_64-GenericCloud"
         # flavor_name = "m1.medium"
         # network_name = "lsst"
 
         # Petasky
-        image_name = "CentOS 7"
-        flavor_name = "c1.medium"
-        network_name = "petasky-net"
+        # image_name = "CentOS 7"
+        # flavor_name = "c1.medium"
+        # network_name = "petasky-net"
 
         # NCSA
-        # image_name = "CentOS 7"
-        # flavor_name = "m1.medium"
-        # network_name = "LSST-net"
+        image_name = "CentOS 7"
+        flavor_name = "m1.medium"
+        network_name = "LSST-net"
+        nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
+        ssh_security_group = "Remote SSH"
 
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
@@ -257,6 +261,10 @@ if __name__ == "__main__":
         logging.info("Add floating ip ({0}) to {1}".format(floating_ip,
             gateway_instance.name))
         gateway_instance.add_floating_ip(floating_ip)
+
+        if ssh_security_group:
+            gateway_instance.add_security_group(ssh_security_group)
+
         # Add gateway to instances list
         instances.append(gateway_instance)
 
