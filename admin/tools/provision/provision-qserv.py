@@ -58,7 +58,6 @@ def nova_servers_create(instance_id):
     # cloud config
     cloud_config_tpl = '''
     #cloud-config
-    #hostname: {hostname}
     #fqdn: {hostname}.local
 
     groups:
@@ -77,18 +76,11 @@ def nova_servers_create(instance_id):
 
     packages:
     - docker
-    #- epel-release
 
     runcmd:
-    # nss-mdns is provided by epel-release
-    # so it can not be installed with 'packages' directive
-    #- [ "yum", "-y", "update" ]
-    #- [ "yum", "-y", "install", "nss-mdns" ]
-    #- [ "/bin/systemctl", "start",  "avahi-daemon.service" ]
     - [ "/bin/systemctl", "--no-block", "start",  "docker.service" ]
-    - [ "hostname", "{hostname}.local" ]
 
-    package_upgrade: true
+    # package_upgrade: true
     package_reboot_if_required: true
     timezone: Europe/Paris
     '''
@@ -178,7 +170,7 @@ def print_ssh_config(instances, floating_ip):
 
     ssh_config_extract = ""
     for instance in instances:
-        fixed_ip = instance.networks['lsst'][0]
+        fixed_ip = instance.networks[network_name][0]
         ssh_config_extract += ssh_config_tpl.format(host=instance.name,
                                                     fixed_ip=fixed_ip,
                                                     floating_ip=floating_ip.ip)
@@ -191,22 +183,22 @@ def print_ssh_config(instances, floating_ip):
 
 def update_etc_hosts():
 
-    hostfile_tpl = '''
-    #{ip}   {host}   {host}.qservlocal
-    #'''
+    hostfile_tpl = "{ip}   {host}   {host}.qservlocal\n"
+
     hostfile=""
     for instance in instances:
         # Collect IP adresses
-        fixed_ip = instance.networks['lsst'][0]
+        fixed_ip = instance.networks[network_name][0]
         hostfile += hostfile_tpl.format(host=instance.name, ip=fixed_ip)
-    logging.debug("hostfile.txt {}".format(hostfile))
 
-    #for instance in instances:
-        # Update /etc/hosts on each machine
-    instance = instances[0]
-    cmd=['ssh', '-t', '-F', './ssh_config', instance.name,
-         'sudo sh -c "echo \'{hostfile}\' >> /etc/hosts"'.format(hostfile=hostfile)]
-    subprocess.check_output(cmd)
+    logging.debug("hostfile.txt:\n---\n{}\n---".format(hostfile))
+
+    # Update /etc/hosts on each machine
+    for instance in instances:
+        cmd=['ssh', '-t', '-F', './ssh_config', instance.name,
+             'sudo sh -c "echo \'{hostfile}\' >> /etc/hosts"'.format(hostfile=hostfile)]
+        logging.debug("cmd:\n---\n{}\n---".format(cmd))
+        subprocess.check_output(cmd)
 
 
 if __name__ == "__main__":
@@ -235,8 +227,17 @@ if __name__ == "__main__":
             sys.exit(2)
 
         # Find an image and a flavor to launch an instance
-        image = nova.images.find(name="CentOS-7-x86_64-GenericCloud")
-        flavor = nova.flavors.find(name="m1.medium")
+
+        #image_name = "CentOS-7-x86_64-GenericCloud"
+        #flavor_name = "m1.medium"
+        #network_name = "lsst"
+
+        image_name = "CentOS 7"
+        flavor_name = "c1.medium"
+        network_name = "petasky-net"
+
+        image = nova.images.find(name=image_name)
+        flavor = nova.flavors.find(name=flavor_name)
 
         # Create instances list
         instances = []
@@ -266,6 +267,7 @@ if __name__ == "__main__":
         #for instance in instances:
         #    nova_servers_delete(instance.name)
 
+        logging.debug("SUCCESS: Qserv Openstack cluster is up")
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)
         sys.exit(3)
