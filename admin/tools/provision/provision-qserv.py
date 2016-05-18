@@ -48,6 +48,18 @@ def get_nova_creds():
     logging.debug("Openstack user: {}".format(d['username']))
     return d
 
+def manage_ssh_key():
+    """
+    Upload ssh public key
+    """
+    logging.info('Manage ssh keys: {}'.format(key))
+    if nova.keypairs.findall(name=key):
+        logging.debug('Remove previous ssh keys')
+        nova.keypairs.delete(key=key)
+
+    with fpubkey:
+        nova.keypairs.create(name=key, public_key=public_key)
+
 def nova_servers_create(instance_id):
     """
     Boot an instance from an image and check status
@@ -84,16 +96,13 @@ def nova_servers_create(instance_id):
     package_reboot_if_required: true
     timezone: Europe/Paris
     '''
-    fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
-    userdata = cloud_config_tpl.format(key=fpubkey.read(),
+
+    userdata = cloud_config_tpl.format(key=public_key,
                                      hostname=instance_name)
-    net_id = ["fc77a88d-a9fb-47bb-a65d-39d1be7a7174"]
-    nics = [{"net-id": net_id, "v4-fixed-ip": ''}]
 
     # Launch an instance from an image
     instance = nova.servers.create(name=instance_name, image=image,
-            flavor=flavor, userdata=userdata, key_name=key,
-            nics=nics)
+            flavor=flavor, userdata=userdata, key_name=key)
     # Poll at 5 second intervals, until the status is no longer 'BUILD'
     status = instance.status
     while status == 'BUILD':
@@ -104,18 +113,6 @@ def nova_servers_create(instance_id):
     logging.info ("Instance {} is active".format(instance_name))
 
     return instance
-
-def manage_ssh_key():
-    """
-    Upload ssh public key
-    """
-    logging.info('Manage ssh keys: {}'.format(key))
-    if nova.keypairs.findall(name=key):
-        logging.debug('Remove previous ssh keys')
-        nova.keypairs.delete(key=key)
-
-    with fpubkey:
-        nova.keypairs.create(name=key, public_key=fpubkey.read())
 
 def get_floating_ip():
     """
@@ -194,13 +191,13 @@ def update_etc_hosts():
         fixed_ip = instance.networks[network_name][0]
         hostfile += hostfile_tpl.format(host=instance.name, ip=fixed_ip)
 
-    logging.debug("hostfile.txt:\n---\n{}\n---".format(hostfile))
+    #logging.debug("hostfile.txt:\n---\n{}\n---".format(hostfile))
 
     # Update /etc/hosts on each machine
     for instance in instances:
         cmd=['ssh', '-t', '-F', './ssh_config', instance.name,
              'sudo sh -c "echo \'{hostfile}\' >> /etc/hosts"'.format(hostfile=hostfile)]
-        logging.debug("cmd:\n---\n{}\n---".format(cmd))
+        #logging.debug("cmd:\n---\n{}\n---".format(cmd))
         subprocess.check_output(cmd)
 
 
@@ -219,11 +216,11 @@ if __name__ == "__main__":
 
         # Upload ssh public key
         key = "{}-qserv".format(creds['username'])
-        # Remove unsafe characters 
-        key = key.replace('.', '_')
+        # Remove unsafe characters
+        #key = key.replace('.', '_')
         fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
+        public_key=fpubkey.read()
         manage_ssh_key()
-        fpubkey.close()
 
         # Find a floating ip for gateway
         floating_ip = get_floating_ip()
@@ -234,9 +231,9 @@ if __name__ == "__main__":
         # Find an image and a flavor to launch an instance
 
         # CC-IN2P3
-        #image_name = "CentOS-7-x86_64-GenericCloud"
-        #flavor_name = "m1.medium"
-        #network_name = "lsst"
+        # image_name = "CentOS-7-x86_64-GenericCloud"
+        # flavor_name = "m1.medium"
+        # network_name = "lsst"
 
         # Petasky
         image_name = "CentOS 7"
@@ -244,9 +241,9 @@ if __name__ == "__main__":
         network_name = "petasky-net"
 
         # NCSA
-        image_name = "CentOS 7"
-        flavor_name = "m1.medium"
-        network_name = "LSST-net"
+        # image_name = "CentOS 7"
+        # flavor_name = "m1.medium"
+        # network_name = "LSST-net"
 
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
@@ -260,12 +257,11 @@ if __name__ == "__main__":
         logging.info("Add floating ip ({0}) to {1}".format(floating_ip,
             gateway_instance.name))
         gateway_instance.add_floating_ip(floating_ip)
-
         # Add gateway to instances list
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1,2):
+        for instance_id in range(1,3):
             worker_instance = nova_servers_create(instance_id)
             # Add workers to instances list
             instances.append(worker_instance)
