@@ -86,19 +86,10 @@ def nova_servers_create(instance_id):
       - {key}
       sudo: ALL=(ALL) NOPASSWD:ALL
 
-    packages:
-    - docker
-
-    runcmd:
-    - [ "/bin/systemctl", "--no-block", "start",  "docker.service" ]
-
-    # package_upgrade: true
-    package_reboot_if_required: true
-    timezone: Europe/Paris
     '''
 
     userdata = cloud_config_tpl.format(key=public_key,
-                                     hostname=instance_name)
+                                       hostname=instance_name)
 
     # Launch an instance from an image
     instance = nova.servers.create(name=instance_name, image=image,
@@ -162,8 +153,8 @@ def print_ssh_config(instances, floating_ip):
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
     PasswordAuthentication no
-    ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p qserv@{floating_ip}
-    IdentityFile ~/.ssh/id_rsa
+    ProxyCommand ssh -i {key_filename} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p qserv@{floating_ip}
+    IdentityFile {key_filename}
     IdentitiesOnly yes
     LogLevel FATAL
     '''
@@ -173,7 +164,8 @@ def print_ssh_config(instances, floating_ip):
         fixed_ip = instance.networks[network_name][0]
         ssh_config_extract += ssh_config_tpl.format(host=instance.name,
                                                     fixed_ip=fixed_ip,
-                                                    floating_ip=floating_ip.ip)
+                                                    floating_ip=floating_ip.ip,
+                                                    key_filename=key_filename)
 
     logging.debug("SSH client config: ")
 
@@ -214,11 +206,13 @@ if __name__ == "__main__":
         creds = get_nova_creds()
         nova = client.Client(**creds)
 
+        key_filename = '~/.ssh/id_rsa_qserv'
+
         # Upload ssh public key
         key = "{}-qserv".format(creds['username'])
         # Remove unsafe characters
         key = key.replace('.', '')
-        fpubkey = open(os.path.expanduser('~/.ssh/id_rsa.pub'))
+        fpubkey = open(os.path.expanduser(key_filename+".pub"))
         public_key=fpubkey.read()
         manage_ssh_key()
 
@@ -231,6 +225,7 @@ if __name__ == "__main__":
         # Find an image and a flavor to launch an instance
 
         nics = []
+        image_name = "centos-7-qserv"
 
         # CC-IN2P3
         # image_name = "CentOS-7-x86_64-GenericCloud"
@@ -243,7 +238,6 @@ if __name__ == "__main__":
         # network_name = "petasky-net"
 
         # NCSA
-        image_name = "CentOS 7"
         flavor_name = "m1.medium"
         network_name = "LSST-net"
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
