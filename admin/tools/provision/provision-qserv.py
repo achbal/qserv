@@ -71,12 +71,7 @@ def nova_servers_create(instance_id):
     # cloud config
     cloud_config_tpl = '''
     #cloud-config
-
-    groups:
-    - docker
-
     users:
-    - default
     - name: qserv
       gecos: Qserv daemon
       groups: docker
@@ -85,7 +80,6 @@ def nova_servers_create(instance_id):
       ssh-authorized-keys:
       - {key}
       sudo: ALL=(ALL) NOPASSWD:ALL
-
     '''
 
     userdata = cloud_config_tpl.format(key=public_key,
@@ -206,7 +200,7 @@ if __name__ == "__main__":
         creds = get_nova_creds()
         nova = client.Client(**creds)
 
-        key_filename = '~/.ssh/id_rsa_qserv'
+        key_filename = '~/.ssh/id_rsa'
 
         # Upload ssh public key
         key = "{}-qserv".format(creds['username'])
@@ -272,6 +266,7 @@ if __name__ == "__main__":
         print_ssh_config(instances, floating_ip)
 
         # Modify /etc/hosts on each machine
+        time.sleep(40)
         update_etc_hosts()
 
         #for instance in instances:

@@ -52,16 +52,19 @@ def nova_image_create():
     # cloud config
     userdata = '''
     #cloud-config
-
     groups:
     - docker
 
     packages:
     - docker
+  
+    runcmd:
+    - ['systemctl', 'enable', 'docker']
 
-    package_upgrade: true
-    package_reboot_if_required: true
-    timezone: Europe/Paris
+    # Currently broken
+    # package_upgrade: true
+    # package_reboot_if_required: true
+    # timezone: Europe/Paris
     '''
 
     # Launch an instance from an image
@@ -77,10 +80,13 @@ def nova_image_create():
     logging.info ("Instance {} is active".format(instance_name))
 
     # TODO: add clean wait for cloud-init completion
-    time.sleep(360)
-    instance.create_image("centos-7-qserv")
-    instance.delete()
-
+    time.sleep(180)
+    _image_name = "centos-7-qserv"
+    instance.create_image(_image_name)
+    new_image = nova.images.find(name=_image_name)
+    logging.debug(new_image)
+    # TODO wait for image creation
+    # instance.delete()
 
 if __name__ == "__main__":
     try:
