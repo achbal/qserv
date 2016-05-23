@@ -12,6 +12,7 @@ TODO
 # -------------------------------
 import logging
 import os
+import re
 import subprocess
 import sys
 import time
@@ -43,7 +44,7 @@ def get_nova_creds():
 
 def nova_image_create():
     """
-    Create an openstack image containing Docker 
+    Create an openstack image containing Docker
     """
     username = creds['username'].replace('.', '')
     instance_name = "{0}-qserv".format(username)
@@ -57,9 +58,10 @@ def nova_image_create():
 
     packages:
     - docker
-  
+
     runcmd:
     - ['systemctl', 'enable', 'docker']
+    #- ['echo', 'XXXSUCCESS']
 
     # Currently broken
     # package_upgrade: true
@@ -80,13 +82,29 @@ def nova_image_create():
     logging.info ("Instance {} is active".format(instance_name))
 
     # TODO: add clean wait for cloud-init completion
-    time.sleep(180)
+    #time.sleep(180)
+
+    checkConfig="Started Execute cloud user/final scripts."
+    is_finished = False
+    while not is_finished:
+        time.sleep(10)
+        output = instance.get_console_output()
+        logging.debug ("output: {}".format(output))
+        word = re.search(checkConfig,output)
+        logging.debug ("word: {}".format(word))
+        print "----------------------------"
+        if word != None:
+            is_finished = True
+
+    logging.info ("cloud config Success")
+    time.sleep(2) 
+
     _image_name = "centos-7-qserv"
     instance.create_image(_image_name)
     new_image = nova.images.find(name=_image_name)
     logging.debug(new_image)
     # TODO wait for image creation
-    # instance.delete()
+    instance.delete()
 
 if __name__ == "__main__":
     try:
