@@ -67,29 +67,31 @@ def cloud_config():
     # cloud config
     userdata = '''
         #cloud-config
-        #groups:
-        #- docker
+        groups:
+        - docker
 
         #packages:
-        #- docker
+        - docker
+        - util-linux
 
         runcmd:
-        - ['echo', 'TOTO']
-        #- ['systemctl', 'enable', 'docker']
+        - ['systemctl', 'enable', 'docker']
         #- ['/tmp/detect_end_cloud_config.sh','&']
 
-        #write_files:
-        #-   path: "/tmp/detect_end_cloud_config.sh"
-        #    permissions: "0544"
-        #    owner: "root"
-        #    content: |
-        #      #!/bin/sh
-        #      while [ ! -f /var/lib/cloud/instance/boot-finished ] ;
-        #      do
-        #        sleep 2
-        #        echo "CLOUD-INIT-DETECT RUNNING"
-        #      done
-        #     echo "CLOUD-INIT-END"
+        write_files:
+        -   path: "/tmp/detect_end_cloud_config.sh"
+            permissions: "0544"
+            owner: "root"
+            content: |
+              #!/bin/sh
+              while [ ! -f /var/lib/cloud/instance/boot-finished ] ;
+              do
+                sleep 2
+                echo "CLOUD-INIT-DETECT RUNNING"
+              done
+              sync
+              fsfreeze -f / && read x; fsfreeze -u /
+              echo "CLOUD-INIT-END"
 
 
         # Currently broken
@@ -166,7 +168,7 @@ if __name__ == "__main__":
         instance = nova_servers_create()
 
         detect_end_cloud_config()
-        time.sleep(60)
+        time.sleep(20)
 
         nova_image_create()
 
