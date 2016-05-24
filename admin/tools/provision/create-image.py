@@ -42,32 +42,13 @@ def get_nova_creds():
     return d
 
 
-def nova_image_create():
+def nova_servers_create():
     """
     Create an openstack image containing Docker
     """
     username = creds['username'].replace('.', '')
     instance_name = "{0}-qserv".format(username)
     logging.info("Launch an instance {}".format(instance_name))
-
-    # cloud config
-    userdata = '''
-    #cloud-config
-    groups:
-    - docker
-
-    packages:
-    - docker
-
-    runcmd:
-    - ['systemctl', 'enable', 'docker']
-    #- ['echo', 'XXXSUCCESS']
-
-    # Currently broken
-    # package_upgrade: true
-    # package_reboot_if_required: true
-    # timezone: Europe/Paris
-    '''
 
     # Launch an instance from an image
     instance = nova.servers.create(name=instance_name, image=image,
@@ -80,31 +61,71 @@ def nova_image_create():
         status = instance.status
     logging.info ("status: {}".format(status))
     logging.info ("Instance {} is active".format(instance_name))
+    return instance
 
-    # TODO: add clean wait for cloud-init completion
-    #time.sleep(180)
+def cloud_config():
+    # cloud config
+    userdata = '''
+        #cloud-config
+        #groups:
+        #- docker
 
-    checkConfig="Started Execute cloud user/final scripts."
-    is_finished = False
-    while not is_finished:
-        time.sleep(10)
+        #packages:
+        #- docker
+
+        runcmd:
+        - ['echo', 'TOTO']
+        #- ['systemctl', 'enable', 'docker']
+        #- ['/tmp/detect_end_cloud_config.sh','&']
+
+        #write_files:
+        #-   path: "/tmp/detect_end_cloud_config.sh"
+        #    permissions: "0544"
+        #    owner: "root"
+        #    content: |
+        #      #!/bin/sh
+        #      while [ ! -f /var/lib/cloud/instance/boot-finished ] ;
+        #      do
+        #        sleep 2
+        #        echo "CLOUD-INIT-DETECT RUNNING"
+        #      done
+        #     echo "CLOUD-INIT-END"
+
+
+        # Currently broken
+        # package_upgrade: true
+        #package_reboot_if_required: true
+        #timezone: Europe/Paris
+        '''
+    return userdata
+
+def detect_end_cloud_config():
+    # Add clean wait for cloud-init completion
+    checkConfig = "Cloud-init v. 0.7.5 finished at"
+    #checkConfig = "CLOUD-INIT-END"
+    has_finished_flag = None
+    while not has_finished_flag:
+        time.sleep(15)
         output = instance.get_console_output()
-        logging.debug ("output: {}".format(output))
-        word = re.search(checkConfig,output)
-        logging.debug ("word: {}".format(word))
+        logging.debug("output: {}".format(output))
+        has_finished_flag = re.search(checkConfig, output)
+        logging.debug("has_finished_flag: {}".format(has_finished_flag))
         print "----------------------------"
-        if word != None:
-            is_finished = True
 
-    logging.info ("cloud config Success")
-    time.sleep(2) 
+    logging.info("cloud config Success")
 
+def nova_image_create():
     _image_name = "centos-7-qserv"
     instance.create_image(_image_name)
-    new_image = nova.images.find(name=_image_name)
-    logging.debug(new_image)
-    # TODO wait for image creation
-    instance.delete()
+    logging.debug("SUCCESS: Qserv image created")
+
+def nova_servers_delete(vm_name):
+    """
+    Retrieve an instance by name and shut it down
+    """
+    server = nova.servers.find(name=vm_name)
+    server.delete()
+
 
 if __name__ == "__main__":
     try:
@@ -141,9 +162,16 @@ if __name__ == "__main__":
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
 
+        userdata = cloud_config()
+        instance = nova_servers_create()
+
+        detect_end_cloud_config()
+        time.sleep(60)
+
         nova_image_create()
 
-        logging.debug("SUCCESS: Qserv image created")
+        # TODO wait for image creation
+        # nova_servers_delete(instance.name)
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)
         sys.exit(3)

@@ -68,23 +68,6 @@ def nova_servers_create(instance_id):
     instance_name = "{0}-qserv-{1}".format(username, instance_id)
     logging.info("Launch an instance {}".format(instance_name))
 
-    # cloud config
-    cloud_config_tpl = '''
-    #cloud-config
-    users:
-    - name: qserv
-      gecos: Qserv daemon
-      groups: docker
-      lock-passwd: true
-      shell: /bin/bash
-      ssh-authorized-keys:
-      - {key}
-      sudo: ALL=(ALL) NOPASSWD:ALL
-    '''
-
-    userdata = cloud_config_tpl.format(key=public_key,
-                                       hostname=instance_name)
-
     # Launch an instance from an image
     instance = nova.servers.create(name=instance_name, image=image,
             flavor=flavor, userdata=userdata, key_name=key, nics=nics)
@@ -98,6 +81,30 @@ def nova_servers_create(instance_id):
     logging.info ("Instance {} is active".format(instance_name))
 
     return instance
+
+def cloud_config():
+    # cloud config
+    cloud_config_tpl = '''
+        #cloud-config
+        users:
+        - name: qserv
+          gecos: Qserv daemon
+          #groups: docker
+          lock-passwd: true
+          shell: /bin/bash
+          ssh-authorized-keys:
+          - {key}
+          sudo: ALL=(ALL) NOPASSWD:ALL
+
+        #package_upgrade: true
+        #package_reboot_if_required: true
+        #timezone: Europe/Paris
+        '''
+
+    userdata = cloud_config_tpl.format(key=public_key)
+
+    return userdata
+
 
 def get_floating_ip():
     """
@@ -239,6 +246,7 @@ if __name__ == "__main__":
 
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
+        userdata = cloud_config()
 
         # Create instances list
         instances = []
