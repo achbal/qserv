@@ -70,13 +70,13 @@ def cloud_config():
         groups:
         - docker
 
-        #packages:
+        packages:
         - docker
-        - util-linux
+        #- util-linux
 
         runcmd:
         - ['systemctl', 'enable', 'docker']
-        #- ['/tmp/detect_end_cloud_config.sh','&']
+        - ['/tmp/detect_end_cloud_config.sh']
 
         write_files:
         -   path: "/tmp/detect_end_cloud_config.sh"
@@ -84,14 +84,14 @@ def cloud_config():
             owner: "root"
             content: |
               #!/bin/sh
-              while [ ! -f /var/lib/cloud/instance/boot-finished ] ;
+              (while [ ! -f /var/lib/cloud/instance/boot-finished ] ;
               do
                 sleep 2
-                echo "CLOUD-INIT-DETECT RUNNING"
+                echo "---CLOUD-INIT-DETECT RUNNING---"
               done
               sync
-              fsfreeze -f / && read x; fsfreeze -u /
-              echo "CLOUD-INIT-END"
+              #fsfreeze -f / && read x; fsfreeze -u /
+              echo "---SYSTEM READY FOR SNAPSHOT---") &
 
 
         # Currently broken
@@ -103,7 +103,7 @@ def cloud_config():
 
 def detect_end_cloud_config():
     # Add clean wait for cloud-init completion
-    checkConfig = "Cloud-init v. 0.7.5 finished at"
+    checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
     #checkConfig = "CLOUD-INIT-END"
     has_finished_flag = None
     while not has_finished_flag:
@@ -112,7 +112,7 @@ def detect_end_cloud_config():
         logging.debug("output: {}".format(output))
         has_finished_flag = re.search(checkConfig, output)
         logging.debug("has_finished_flag: {}".format(has_finished_flag))
-        print "----------------------------"
+        logging.debug("----------------------------")
 
     logging.info("cloud config Success")
 
@@ -168,7 +168,7 @@ if __name__ == "__main__":
         instance = nova_servers_create()
 
         detect_end_cloud_config()
-        time.sleep(20)
+        #time.sleep(20)
 
         nova_image_create()
 
