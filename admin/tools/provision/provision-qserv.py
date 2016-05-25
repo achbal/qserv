@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Boot instances in cluster infrastructure, and use cloud config to create users
+Boot instances from an image already created in cluster infrastructure, and use cloud config to create users
 and install packages on virtual machines
 
 Script performs these tasks:
@@ -20,6 +20,7 @@ Script performs these tasks:
 # -------------------------------
 import logging
 import os
+import re
 import subprocess
 import sys
 import time
@@ -30,24 +31,11 @@ import warnings
 # ----------------------------
 from novaclient import client
 import novaclient.exceptions
+import lib_common
 
 # -----------------------
 # Exported definitions --
 # -----------------------
-def get_nova_creds():
-    """
-    Extract the login information from the environment
-    """
-    d = {}
-    d['version'] = 2
-    d['username'] = os.environ['OS_USERNAME']
-    d['api_key'] = os.environ['OS_PASSWORD']
-    d['auth_url'] = os.environ['OS_AUTH_URL']
-    d['project_id'] = os.environ['OS_TENANT_NAME']
-    d['insecure'] = True
-    logging.debug("Openstack user: {}".format(d['username']))
-    return d
-
 def manage_ssh_key():
     """
     Upload ssh public key
@@ -89,7 +77,7 @@ def cloud_config():
         users:
         - name: qserv
           gecos: Qserv daemon
-          #groups: docker
+          groups: docker
           lock-passwd: true
           shell: /bin/bash
           ssh-authorized-keys:
@@ -174,6 +162,20 @@ def print_ssh_config(instances, floating_ip):
     f.write(ssh_config_extract)
     f.close()
 
+def detect_end_cloud_config():
+    # Add clean wait for cloud-init completion
+    checkConfig = "Cloud-init v. 0.7.5 finished at"
+    has_finished_flag = None
+    while not has_finished_flag:
+        time.sleep(10)
+        output = worker_instance.get_console_output()
+        logging.debug("output: {}".format(output))
+        has_finished_flag = re.search(checkConfig, output)
+        logging.debug("has_finished_flag: {}".format(has_finished_flag))
+        logging.debug("----------------------------")
+
+    logging.info("cloud config Success")
+
 def update_etc_hosts():
 
     hostfile_tpl = "{ip}    {host}\n"
@@ -204,7 +206,7 @@ if __name__ == "__main__":
         # Disable warnings
         warnings.filterwarnings("ignore")
 
-        creds = get_nova_creds()
+        creds = lib_common.get_nova_creds()
         nova = client.Client(**creds)
 
         key_filename = '~/.ssh/id_rsa'
@@ -274,7 +276,8 @@ if __name__ == "__main__":
         print_ssh_config(instances, floating_ip)
 
         # Modify /etc/hosts on each machine
-        time.sleep(40)
+        detect_end_cloud_config()
+        #time.sleep(40)
         update_etc_hosts()
 
         #for instance in instances:

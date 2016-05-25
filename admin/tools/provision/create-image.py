@@ -1,7 +1,14 @@
 #!/usr/bin/env python
 
 """
-TODO
+Create a snapshot from an instance, and use cloud config to install packages on virtual machines
+
+Script performs these tasks:
+- launch instances from image
+- create a snapshot
+- use cloud config
+- shut down the instance created
+
 
 @author  Oualid Achbal, ISIMA student , IN2P3
 
@@ -72,7 +79,7 @@ def cloud_config():
 
         packages:
         - docker
-        #- util-linux
+        - util-linux
 
         runcmd:
         - ['systemctl', 'enable', 'docker']
@@ -90,21 +97,20 @@ def cloud_config():
                 echo "---CLOUD-INIT-DETECT RUNNING---"
               done
               sync
-              #fsfreeze -f / && read x; fsfreeze -u /
+              fsfreeze -f / && read x; fsfreeze -u /
               echo "---SYSTEM READY FOR SNAPSHOT---") &
-
 
         # Currently broken
         # package_upgrade: true
-        #package_reboot_if_required: true
-        #timezone: Europe/Paris
+        # package_reboot_if_required: true
+        # timezone: Europe/Paris
         '''
     return userdata
 
 def detect_end_cloud_config():
     # Add clean wait for cloud-init completion
     checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
-    #checkConfig = "CLOUD-INIT-END"
+    #checkConfig = "finished at"
     has_finished_flag = None
     while not has_finished_flag:
         time.sleep(15)
@@ -118,7 +124,13 @@ def detect_end_cloud_config():
 
 def nova_image_create():
     _image_name = "centos-7-qserv"
-    instance.create_image(_image_name)
+    new_image = instance.create_image(_image_name)
+    #status = new_image.status
+    #while status != 'ACTIVE':
+    #    time.sleep(5)
+    #    status = new_image.status
+    #logging.info ("status: {}".format(status))
+    #logging.info ("Image {} is active".format(_image_name))
     logging.debug("SUCCESS: Qserv image created")
 
 def nova_servers_delete(vm_name):
@@ -159,7 +171,7 @@ if __name__ == "__main__":
         flavor_name = "m1.medium"
         network_name = "LSST-net"
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
-        ssh_security_group = "Remote SSH"
+        #ssh_security_group = "Remote SSH"
 
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
