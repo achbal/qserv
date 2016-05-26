@@ -71,7 +71,9 @@ def nova_servers_create(instance_id):
     return instance
 
 def cloud_config():
-    # cloud config
+    """
+    cloud config
+    """
     cloud_config_tpl = '''
         #cloud-config
         users:
@@ -153,21 +155,6 @@ def print_ssh_config(instances, floating_ip):
     f = open("ssh_config", "w")
     f.write(ssh_config_extract)
     f.close()
-
-def detect_end_cloud_config():
-    # Add clean wait for cloud-init completion
-    checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
-    has_finished_flag = None
-    while not has_finished_flag:
-        time.sleep(15)
-        output = worker_instance.get_console_output()
-        logging.debug("output: {}".format(output))
-        has_finished_flag = re.search(checkConfig, output)
-        logging.debug("has_finished_flag: {}".format(has_finished_flag))
-        logging.debug("----------------------------")
-
-    logging.info("cloud config Success")
-
 
 def update_etc_hosts():
 
@@ -269,7 +256,7 @@ if __name__ == "__main__":
         print_ssh_config(instances, floating_ip)
 
         # Modify /etc/hosts on each machine
-        detect_end_cloud_config()
+        lib_common.detect_end_cloud_config(worker_instance)
         #time.sleep(40)
         update_etc_hosts()
 

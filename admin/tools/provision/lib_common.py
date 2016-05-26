@@ -40,7 +40,7 @@ def get_nova_creds():
     logging.debug("Openstack user: {}".format(d['username']))
     return d
 
-def nova_servers_create(instance_id):
+def nova_servers_create(instance_id,userdata):
     """
     Boot an instance from an image and check status
     """
@@ -64,7 +64,7 @@ def nova_servers_create(instance_id):
 
 def detect_end_cloud_config(instance):
     # Add clean wait for cloud-init completion
-    checkConfig = "Started Execute cloud user/final scripts."
+    checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
     is_finished = False
     while not is_finished:
         time.sleep(15)
@@ -85,39 +85,10 @@ def nova_servers_delete(vm_name):
 
 if __name__ == "__main__":
     try:
-        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s %(message)s',level=logging.DEBUG)
-
-        # Disable request package logger
-        logging.getLogger("requests").setLevel(logging.ERROR)
-
-        # Disable warnings
-        warnings.filterwarnings("ignore")
-
         creds = get_nova_creds()
         nova = client.Client(**creds)
 
-        key_filename = '~/.ssh/id_rsa'
 
-        # Upload ssh public key
-        key = "{}-qserv".format(creds['username'])
-        # Remove unsafe characters
-        key = key.replace('.', '')
-        fpubkey = open(os.path.expanduser(key_filename+".pub"))
-        public_key=fpubkey.read()
-        # Find an image and a flavor to launch an instance
-
-        nics = []
-        image_name = "centos-7-qserv"
-
-        # NCSA
-        flavor_name = "m1.medium"
-        network_name = "LSST-net"
-        nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
-        ssh_security_group = "Remote SSH"
-
-        image = nova.images.find(name=image_name)
-        flavor = nova.flavors.find(name=flavor_name)
-        userdata = cloud_config()
 
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)

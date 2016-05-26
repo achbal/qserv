@@ -57,7 +57,9 @@ def nova_servers_create():
     return instance
 
 def cloud_config():
-    # cloud config
+    """
+    cloud config
+    """
     userdata = '''
         #cloud-config
         groups:
@@ -92,21 +94,10 @@ def cloud_config():
         '''
     return userdata
 
-def detect_end_cloud_config():
-    # Add clean wait for cloud-init completion
-    checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
-    has_finished_flag = None
-    while not has_finished_flag:
-        time.sleep(15)
-        output = instance.get_console_output()
-        logging.debug("output: {}".format(output))
-        has_finished_flag = re.search(checkConfig, output)
-        logging.debug("has_finished_flag: {}".format(has_finished_flag))
-        logging.debug("----------------------------")
-
-    logging.info("cloud config Success")
-
 def nova_image_create():
+    """
+    Create an openstack image containing Docker
+    """
     _image_name = "centos-7-qserv"
     new_image = instance.create_image(_image_name)
     #status = new_image.status
@@ -151,11 +142,13 @@ if __name__ == "__main__":
 
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
+        # Upload ssh public key
+        key = "{}-qserv".format(creds['username'])
 
         userdata = cloud_config()
         instance = nova_servers_create()
 
-        detect_end_cloud_config()
+        lib_common.detect_end_cloud_config(instance)
         #time.sleep(20)
 
         nova_image_create()
