@@ -83,6 +83,9 @@ def cloud_config():
           ssh-authorized-keys:
           - {key}
           sudo: ALL=(ALL) NOPASSWD:ALL
+
+        runcmd:
+        - ['/tmp/detect_end_cloud_config.sh']
         '''
 
     userdata = cloud_config_tpl.format(key=public_key)
@@ -116,13 +119,6 @@ def get_floating_ip():
             sys.exit(1)
 
     return floating_ip
-
-def nova_servers_delete(vm_name):
-    """
-    Retrieve an instance by name and shut it down
-    """
-    server = nova.servers.find(name=vm_name)
-    server.delete()
 
 def print_ssh_config(instances, floating_ip):
     """
@@ -160,10 +156,10 @@ def print_ssh_config(instances, floating_ip):
 
 def detect_end_cloud_config():
     # Add clean wait for cloud-init completion
-    checkConfig = "Cloud-init v. 0.7.5 finished at"
+    checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
     has_finished_flag = None
     while not has_finished_flag:
-        time.sleep(10)
+        time.sleep(15)
         output = worker_instance.get_console_output()
         logging.debug("output: {}".format(output))
         has_finished_flag = re.search(checkConfig, output)
@@ -171,6 +167,7 @@ def detect_end_cloud_config():
         logging.debug("----------------------------")
 
     logging.info("cloud config Success")
+
 
 def update_etc_hosts():
 
@@ -277,7 +274,7 @@ if __name__ == "__main__":
         update_etc_hosts()
 
         #for instance in instances:
-        #    nova_servers_delete(instance.name)
+        #    lib_common.nova_servers_delete(instance.name)
 
         logging.debug("SUCCESS: Qserv Openstack cluster is up")
     except Exception as exc:

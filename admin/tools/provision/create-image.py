@@ -30,25 +30,11 @@ import warnings
 # ----------------------------
 from novaclient import client
 import novaclient.exceptions
+import lib_common
 
 # -----------------------
 # Exported definitions --
 # -----------------------
-def get_nova_creds():
-    """
-    Extract the login information from the environment
-    """
-    d = {}
-    d['version'] = 2
-    d['username'] = os.environ['OS_USERNAME']
-    d['api_key'] = os.environ['OS_PASSWORD']
-    d['auth_url'] = os.environ['OS_AUTH_URL']
-    d['project_id'] = os.environ['OS_TENANT_NAME']
-    d['insecure'] = True
-    logging.debug("Openstack user: {}".format(d['username']))
-    return d
-
-
 def nova_servers_create():
     """
     Create an openstack image containing Docker
@@ -131,13 +117,6 @@ def nova_image_create():
     #logging.info ("Image {} is active".format(_image_name))
     logging.debug("SUCCESS: Qserv image created")
 
-def nova_servers_delete(vm_name):
-    """
-    Retrieve an instance by name and shut it down
-    """
-    server = nova.servers.find(name=vm_name)
-    server.delete()
-
 
 if __name__ == "__main__":
     try:
@@ -149,7 +128,7 @@ if __name__ == "__main__":
         # Disable warnings
         warnings.filterwarnings("ignore")
 
-        creds = get_nova_creds()
+        creds = lib_common.get_nova_creds()
         nova = client.Client(**creds)
 
         nics = []
@@ -165,12 +144,10 @@ if __name__ == "__main__":
         # network_name = "petasky-net"
 
         # NCSA
-        #image_name = "CentOS 7"
         image_name = "centos7_updated_systemd"
         flavor_name = "m1.medium"
         network_name = "LSST-net"
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
-        #ssh_security_group = "Remote SSH"
 
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
@@ -184,7 +161,7 @@ if __name__ == "__main__":
         nova_image_create()
 
         # TODO wait for image creation
-        # nova_servers_delete(instance.name)
+        # lib_common.nova_servers_delete(instance.name)
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)
         sys.exit(3)
