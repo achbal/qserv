@@ -100,17 +100,15 @@ def cloud_config():
               fsfreeze -f / && read x; fsfreeze -u /
               echo "---SYSTEM READY FOR SNAPSHOT---") &
 
-        # Currently broken
-        # package_upgrade: true
-        # package_reboot_if_required: true
-        # timezone: Europe/Paris
+        package_upgrade: true
+        package_reboot_if_required: true
+        timezone: Europe/Paris
         '''
     return userdata
 
 def detect_end_cloud_config():
     # Add clean wait for cloud-init completion
     checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
-    #checkConfig = "finished at"
     has_finished_flag = None
     while not has_finished_flag:
         time.sleep(15)
@@ -167,7 +165,8 @@ if __name__ == "__main__":
         # network_name = "petasky-net"
 
         # NCSA
-        image_name = "CentOS 7"
+        #image_name = "CentOS 7"
+        image_name = "centos7_updated_systemd"
         flavor_name = "m1.medium"
         network_name = "LSST-net"
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]

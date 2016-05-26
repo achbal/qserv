@@ -83,10 +83,6 @@ def cloud_config():
           ssh-authorized-keys:
           - {key}
           sudo: ALL=(ALL) NOPASSWD:ALL
-
-        #package_upgrade: true
-        #package_reboot_if_required: true
-        #timezone: Europe/Paris
         '''
 
     userdata = cloud_config_tpl.format(key=public_key)
