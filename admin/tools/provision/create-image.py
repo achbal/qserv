@@ -18,9 +18,6 @@ Script performs these tasks:
 #  Imports of standard modules --
 # -------------------------------
 import logging
-import os
-import re
-import subprocess
 import sys
 import time
 import warnings
@@ -54,11 +51,12 @@ def nova_servers_create():
         status = instance.status
     logging.info ("status: {}".format(status))
     logging.info ("Instance {} is active".format(instance_name))
+
     return instance
 
 def cloud_config():
     """
-    cloud config
+    cloud init
     """
     userdata = '''
         #cloud-config
@@ -99,14 +97,16 @@ def nova_image_create():
     Create an openstack image containing Docker
     """
     _image_name = "centos-7-qserv"
-    new_image = instance.create_image(_image_name)
-    #status = new_image.status
-    #while status != 'ACTIVE':
-    #    time.sleep(5)
-    #    status = new_image.status
-    #logging.info ("status: {}".format(status))
-    #logging.info ("Image {} is active".format(_image_name))
+    qserv_image = instance.create_image(_image_name)
+    status = nova.images.get(qserv_image).status
+    while status != 'ACTIVE':
+        time.sleep(5)
+        status = nova.images.get(qserv_image).status
+    logging.info ("status: {}".format(status))
     logging.debug("SUCCESS: Qserv image created")
+    logging.info ("Image {} is active".format(_image_name))
+
+    return qserv_image
 
 
 if __name__ == "__main__":
@@ -123,6 +123,7 @@ if __name__ == "__main__":
         nova = client.Client(**creds)
 
         nics = []
+        userdata = cloud_config()
 
         # CC-IN2P3
         # image_name = "CentOS-7-x86_64-GenericCloud"
@@ -140,18 +141,15 @@ if __name__ == "__main__":
         network_name = "LSST-net"
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
 
+        # Find an image and a flavor to launch an instance
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
-        # Upload ssh public key
-        key = "{}-qserv".format(creds['username'])
 
-        userdata = cloud_config()
         instance = nova_servers_create()
 
         lib_common.detect_end_cloud_config(instance)
-        #time.sleep(20)
 
-        nova_image_create()
+        qserv_image = nova_image_create()
 
         # TODO wait for image creation
         # lib_common.nova_servers_delete(instance.name)

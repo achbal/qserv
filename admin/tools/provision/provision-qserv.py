@@ -20,7 +20,6 @@ Script performs these tasks:
 # -------------------------------
 import logging
 import os
-import re
 import subprocess
 import sys
 import time
@@ -72,7 +71,7 @@ def nova_servers_create(instance_id):
 
 def cloud_config():
     """
-    cloud config
+    cloud init
     """
     cloud_config_tpl = '''
         #cloud-config
@@ -189,12 +188,14 @@ if __name__ == "__main__":
         creds = lib_common.get_nova_creds()
         nova = client.Client(**creds)
 
-        key_filename = '~/.ssh/id_rsa'
-
         # Upload ssh public key
         key = "{}-qserv".format(creds['username'])
+
         # Remove unsafe characters
         key = key.replace('.', '')
+
+        # Manage ssh key
+        key_filename = '~/.ssh/id_rsa'
         fpubkey = open(os.path.expanduser(key_filename+".pub"))
         public_key=fpubkey.read()
         manage_ssh_key()
@@ -205,10 +206,9 @@ if __name__ == "__main__":
             logging.fatal("Unable to add public ip to Qserv gateway")
             sys.exit(2)
 
-        # Find an image and a flavor to launch an instance
-
         nics = []
         image_name = "centos-7-qserv"
+        userdata = cloud_config()
 
         # CC-IN2P3
         # image_name = "CentOS-7-x86_64-GenericCloud"
@@ -226,9 +226,9 @@ if __name__ == "__main__":
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
         ssh_security_group = "Remote SSH"
 
+        # Find an image and a flavor to launch an instance
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
-        userdata = cloud_config()
 
         # Create instances list
         instances = []
@@ -240,6 +240,7 @@ if __name__ == "__main__":
             gateway_instance.name))
         gateway_instance.add_floating_ip(floating_ip)
 
+        # Manage ssh security group
         if ssh_security_group:
             gateway_instance.add_security_group(ssh_security_group)
 
@@ -257,11 +258,7 @@ if __name__ == "__main__":
 
         # Modify /etc/hosts on each machine
         lib_common.detect_end_cloud_config(worker_instance)
-        #time.sleep(40)
         update_etc_hosts()
-
-        #for instance in instances:
-        #    lib_common.nova_servers_delete(instance.name)
 
         logging.debug("SUCCESS: Qserv Openstack cluster is up")
     except Exception as exc:

@@ -12,10 +12,7 @@
 import logging
 import os
 import re
-import subprocess
-import sys
 import time
-import warnings
 
 # ----------------------------
 # Imports for other modules --
@@ -40,28 +37,6 @@ def get_nova_creds():
     logging.debug("Openstack user: {}".format(d['username']))
     return d
 
-def nova_servers_create(instance_id,userdata):
-    """
-    Boot an instance from an image and check status
-    """
-    username = creds['username'].replace('.', '')
-    instance_name = "{0}-qserv-{1}".format(username, instance_id)
-    logging.info("Launch an instance {}".format(instance_name))
-
-    # Launch an instance from an image
-    instance = nova.servers.create(name=instance_name, image=image,
-            flavor=flavor, userdata=userdata, key_name=key, nics=nics)
-    # Poll at 5 second intervals, until the status is no longer 'BUILD'
-    status = instance.status
-    while status == 'BUILD':
-        time.sleep(5)
-        instance.get()
-        status = instance.status
-    logging.info ("status: {}".format(status))
-    logging.info ("Instance {} is active".format(instance_name))
-
-    return instance
-
 def detect_end_cloud_config(instance):
     # Add clean wait for cloud-init completion
     checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
@@ -80,16 +55,8 @@ def nova_servers_delete(vm_name):
     """
     Retrieve an instance by name and shut it down
     """
+    creds = get_nova_creds()
+    nova = client.Client(**creds)
     server = nova.servers.find(name=vm_name)
     server.delete()
 
-if __name__ == "__main__":
-    try:
-        creds = get_nova_creds()
-        nova = client.Client(**creds)
-
-
-
-    except Exception as exc:
-        logging.critical('Exception occured: %s', exc, exc_info=True)
-        sys.exit(3)
