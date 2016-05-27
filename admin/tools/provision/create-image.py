@@ -86,9 +86,9 @@ def cloud_config():
               fsfreeze -f / && read x; fsfreeze -u /
               echo "---SYSTEM READY FOR SNAPSHOT---") &
 
-        package_upgrade: true
-        package_reboot_if_required: true
-        timezone: Europe/Paris
+        #package_upgrade: true
+        #package_reboot_if_required: true
+        #timezone: Europe/Paris
         '''
     return userdata
 
@@ -97,6 +97,7 @@ def nova_image_create():
     Create an openstack image containing Docker
     """
     _image_name = "centos-7-qserv"
+    logging.info("Creating Qserv image")
     qserv_image = instance.create_image(_image_name)
     status = nova.images.get(qserv_image).status
     while status != 'ACTIVE':
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         qserv_image = nova_image_create()
 
         # TODO wait for image creation
-        # lib_common.nova_servers_delete(instance.name)
+        lib_common.nova_servers_delete(instance.name)
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)
         sys.exit(3)
