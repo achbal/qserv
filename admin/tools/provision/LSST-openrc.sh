@@ -22,7 +22,7 @@ export OS_PROJECT_NAME="LSST"
 
 # In addition to the owning entity (tenant), OpenStack stores the entity
 # performing the action as the **user**.
-export OS_USERNAME="lsst-fabrice.jammes"
+export OS_USERNAME="lsst-aaoualid"
 
 # With Keystone you pass the keystone password.
 echo "Please enter your OpenStack Password: "
