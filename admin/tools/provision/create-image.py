@@ -26,7 +26,6 @@ import warnings
 # Imports for other modules --
 # ----------------------------
 from novaclient import client
-import novaclient.exceptions
 import lib_common
 
 # -----------------------
@@ -123,8 +122,11 @@ if __name__ == "__main__":
         creds = lib_common.get_nova_creds()
         nova = client.Client(**creds)
 
-        nics = []
+
+        # Write cloud init file
         userdata = cloud_config()
+
+        # Add cloud fixes
 
         # CC-IN2P3
         # image_name = "CentOS-7-x86_64-GenericCloud"
@@ -140,19 +142,23 @@ if __name__ == "__main__":
         image_name = "centos7_updated_systemd"
         flavor_name = "m1.medium"
         network_name = "LSST-net"
+        nics = []
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
 
         # Find an image and a flavor to launch an instance
         image = nova.images.find(name=image_name)
         flavor = nova.flavors.find(name=flavor_name)
 
+        # Launch instance from image
         instance = nova_servers_create()
 
+        # Wait for cloud config completion
         lib_common.detect_end_cloud_config(instance)
 
+        # Take a snapshot
         qserv_image = nova_image_create()
 
-        # TODO wait for image creation
+        # Delete instance after taking a snapshot
         lib_common.nova_servers_delete(instance.name)
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)

@@ -18,9 +18,9 @@ Script performs these tasks:
 # -------------------------------
 #  Imports of standard modules --
 # -------------------------------
+from subprocess import check_output
 import logging
 import os
-import subprocess
 import sys
 import time
 import warnings
@@ -172,7 +172,7 @@ def update_etc_hosts():
         cmd=['ssh', '-t', '-F', './ssh_config', instance.name,
              'sudo sh -c "echo \'{hostfile}\' >> /etc/hosts"'.format(hostfile=hostfile)]
         #logging.debug("cmd:\n---\n{}\n---".format(cmd))
-        subprocess.check_output(cmd)
+        check_output(cmd)
 
 
 if __name__ == "__main__":
@@ -206,23 +206,27 @@ if __name__ == "__main__":
             logging.fatal("Unable to add public ip to Qserv gateway")
             sys.exit(2)
 
-        nics = []
-        image_name = "centos-7-qserv"
+
+        # Write cloud init file
         userdata = cloud_config()
 
+        # Add cloud fixes
+
         # CC-IN2P3
-        # image_name = "CentOS-7-x86_64-GenericCloud"
+        # image_name = "centos-7-qserv"
         # flavor_name = "m1.medium"
         # network_name = "lsst"
 
         # Petasky
-        # image_name = "CentOS 7"
+        # image_name = "centos-7-qserv"
         # flavor_name = "c1.medium"
         # network_name = "petasky-net"
 
         # NCSA
+        image_name = "centos-7-qserv"
         flavor_name = "m1.medium"
         network_name = "LSST-net"
+        nics = []
         nics = [ { 'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174' } ]
         ssh_security_group = "Remote SSH"
 
@@ -256,8 +260,10 @@ if __name__ == "__main__":
         # Show ssh client config
         print_ssh_config(instances, floating_ip)
 
-        # Modify /etc/hosts on each machine
+        # Wait for cloud config completion
         lib_common.detect_end_cloud_config(worker_instance)
+
+        # Modify /etc/hosts on each machine
         update_etc_hosts()
 
         logging.debug("SUCCESS: Qserv Openstack cluster is up")
