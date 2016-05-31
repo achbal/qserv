@@ -29,9 +29,9 @@ import cloudmanager
 # -----------------------
 # Exported definitions --
 # -----------------------
-def cloud_config():
+def get_cloudconfig():
     """
-    cloud init
+    Write cloud init file
     """
     userdata = '''
         #cloud-config
@@ -71,11 +71,8 @@ def cloud_config():
 if __name__ == "__main__":
     try:
         logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s %(message)s',level=logging.DEBUG)
-
-        # Disable request package logger
+        # Disable request package logger and warnings
         logging.getLogger("requests").setLevel(logging.ERROR)
-
-        # Disable warnings
         warnings.filterwarnings("ignore")
 
         # CC-IN2P3
@@ -92,23 +89,22 @@ if __name__ == "__main__":
 
         # NCSA
         image_name = "centos7_updated_systemd"
+        _image_name = "centos-7-qserv"
         flavor_name = "m1.medium"
         network_name = "LSST-net"
         nics = [{'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174'}]
 
         cloudManager = cloudmanager.CloudManager(image_name, flavor_name, network_name, nics)
 
-        # Write cloud init file
-        userdata = cloud_config()
+        userdata = get_cloudconfig()
 
-        # Launch instance from image
-        instance = cloudManager.nova_servers_create(100, userdata)
+        instance = cloudManager.nova_servers_create(0, userdata)
 
         # Wait for cloud config completion
         cloudManager.detect_end_cloud_config(instance)
 
         # Take a snapshot
-        qserv_image = cloudManager.nova_image_create(instance)
+        qserv_image = cloudManager.nova_image_create(instance, _image_name=_image_name)
 
         # Delete instance after taking a snapshot
         cloudManager.nova_servers_delete(instance.name)

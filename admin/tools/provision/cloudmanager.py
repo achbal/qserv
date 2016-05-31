@@ -32,7 +32,6 @@ class CloudManager(object):
         """
         Constructor
         """
-
         self.network_name = network_name
         self.nics = nics
         self.ssh_security_group = security_groups
@@ -48,10 +47,7 @@ class CloudManager(object):
         else:
             self.key = None
 
-        # Manage ssh key
         self.key_filename = '~/.ssh/id_rsa'
-
-        # Find an image and a flavor to launch an instance
         self.image = self.nova.images.find(name=image_name)
         self.flavor = self.nova.flavors.find(name=flavor_name)
 
@@ -72,56 +68,10 @@ class CloudManager(object):
 
         return creds
 
-    def detect_end_cloud_config(self, instance):
-        """
-        Add clean wait for cloud-init completion
-        """
-        checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
-        is_finished = False
-        while not is_finished:
-            time.sleep(15)
-            output = instance.get_console_output()
-            logging.debug("output: {}".format(output))
-            word = re.search(checkConfig, output)
-            logging.debug("word: {}".format(word))
-            logging.debug("----------------------------")
-            if word != None:
-                is_finished = True
-
-    def nova_servers_delete(self, vm_name):
-        """
-        Retrieve an instance by name and shut it down
-        """
-        server = self.nova.servers.find(name=vm_name)
-        server.delete()
-
-
-    def nova_servers_create(self, instance_id, userdata):
+    def nova_image_create(self, instance, _image_name):
         """
         Create an openstack image containing Docker
         """
-        instance_name = "{0}-qserv-{1}".format(self._creds['safe_username'], instance_id)
-        logging.info("Launch an instance {}".format(instance_name))
-
-        # Launch an instance from an image
-        instance = self.nova.servers.create(name=instance_name, image=self.image,
-                                       flavor=self.flavor, userdata=userdata, key_name=self.key, nics=self.nics)
-        # Poll at 5 second intervals, until the status is no longer 'BUILD'
-        status = instance.status
-        while status == 'BUILD':
-            time.sleep(5)
-            instance.get()
-            status = instance.status
-        logging.info("status: {}".format(status))
-        logging.info("Instance {} is active".format(instance_name))
-
-        return instance
-
-    def nova_image_create(self,instance):
-        """
-        Create an openstack image containing Docker
-        """
-        _image_name = "centos-7-qserv"
         logging.info("Creating Qserv image")
         qserv_image = instance.create_image(_image_name)
         status = self.nova.images.get(qserv_image).status
@@ -133,6 +83,50 @@ class CloudManager(object):
         logging.info("Image {} is active".format(_image_name))
 
         return qserv_image
+
+    def nova_servers_create(self, instance_id, userdata):
+        """
+        Boot an instance and check status
+        """
+        instance_name = "{}-qserv-{:02d}".format(self._creds['safe_username'], instance_id)
+        logging.info("Launch an instance {}".format(instance_name))
+
+        # Launch an instance from an image
+        instance = self.nova.servers.create(name=instance_name, image=self.image,
+                                            flavor=self.flavor, userdata=userdata, key_name=self.key, nics=self.nics)
+        # Poll at 5 second intervals, until the status is no longer 'BUILD'
+        status = instance.status
+        while status == 'BUILD':
+            time.sleep(5)
+            instance.get()
+            status = instance.status
+        logging.info("status: {}".format(status))
+        logging.info("Instance {} is active".format(instance_name))
+
+        return instance
+
+    def detect_end_cloud_config(self, instance):
+        """
+        Add clean wait for cloud-init completion
+        """
+        checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
+        is_finished = False
+        while not is_finished:
+            time.sleep(15)
+            output = instance.get_console_output()
+            #logging.debug("output: {}".format(output))
+            word = re.search(checkConfig, output)
+            #logging.debug("word: {}".format(word))
+            #logging.debug("----------------------------")
+            if word != None:
+                is_finished = True
+
+    def nova_servers_delete(self, vm_name):
+        """
+        Retrieve an instance by name and shut it down
+        """
+        server = self.nova.servers.find(name=vm_name)
+        server.delete()
 
     def manage_ssh_key(self):
         """
@@ -169,7 +163,7 @@ class CloudManager(object):
                 floating_ip = self.nova.floating_ips.create(floating_ip_pool)
             except novaclient.exceptions.Forbidden as e:
                 logging.fatal("Unable to retrieve public IP: {0}".format(e))
-                sys.exit(1)
+                sys.exit(4)
 
         return floating_ip
 
@@ -208,7 +202,9 @@ class CloudManager(object):
         f.close()
 
     def update_etc_hosts(self,instances):
-
+        """
+        Modify /etc/hosts on each machine
+        """
         hostfile_tpl = "{ip}    {host}\n"
 
         hostfile = ""
@@ -227,6 +223,6 @@ class CloudManager(object):
                 check_output(cmd)
             except CalledProcessError as exc:
                 logging.error("ERROR while updating /etc/hosts: {}".format(exc.output))
-                sys.exit(2)
+                sys.exit(5)
 
 

@@ -35,7 +35,7 @@ import cloudmanager
 # -----------------------
 def get_cloudconfig():
     """
-    cloud init
+    Write cloud init file
     """
     cloud_config_tpl = '''
         #cloud-config
@@ -62,15 +62,21 @@ def get_cloudconfig():
 if __name__ == "__main__":
     try:
         logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s %(message)s',level=logging.DEBUG)
-
-        # Disable request package logger
+        # Disable request package logger and warnings
         logging.getLogger("requests").setLevel(logging.ERROR)
-
-        # Disable warnings
         warnings.filterwarnings("ignore")
 
-        # Add cloud fixes
+        # CC-IN2P3
+        # image_name = "CentOS-7-x86_64-GenericCloud"
+        # flavor_name = "m1.medium"
+        # network_name = "lsst"
+        # nics = []
 
+        # Petasky
+        # image_name = "CentOS 7"
+        # flavor_name = "c1.medium"
+        # network_name = "petasky-net"
+        # nics = []
 
         # NCSA
         image_name = "centos-7-qserv"
@@ -105,25 +111,22 @@ if __name__ == "__main__":
         if cloudManager.ssh_security_group:
             gateway_instance.add_security_group(cloudManager.ssh_security_group)
 
-        # Add gateway to instances list
         instances.append(gateway_instance)
 
         # Create worker instances
         for instance_id in range(1,3):
             worker_instance = cloudManager.nova_servers_create(instance_id, userdata)
-            # Add workers to instances list
             instances.append(worker_instance)
 
-        # Show ssh client config
         cloudManager.print_ssh_config(instances, floating_ip)
 
-        # Wait for cloud config completion
+        # Wait for cloud config completion for the last instance
         cloudManager.detect_end_cloud_config(instances[-1])
 
-        # Modify /etc/hosts on each machine
         cloudManager.update_etc_hosts(instances)
 
         logging.debug("SUCCESS: Qserv Openstack cluster is up")
+
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)
         sys.exit(3)
