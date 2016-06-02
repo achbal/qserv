@@ -125,8 +125,9 @@ if __name__ == "__main__":
 
         cloudManager.print_ssh_config(instances, floating_ip)
 
-        # Wait for cloud config completion for the last instance
-        cloudManager.detect_end_cloud_config(instances[-1])
+        # Wait for cloud config completion for all machines
+        for instance in instances:
+            cloudManager.detect_end_cloud_config(instance)
 
         cloudManager.check_ssh_up(instances)
 
