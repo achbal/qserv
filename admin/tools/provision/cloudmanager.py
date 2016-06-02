@@ -56,16 +56,17 @@ class CloudManager(object):
 
         logging.debug("Use configuration file: {}".format(self.args.configFile))
 
-        config = ConfigParser.ConfigParser({'net-id': None, 'ssh_security_group': None})
+        config = ConfigParser.ConfigParser({'net-id': None,
+                                            'ssh_security_group': None})
 
         try:
-            f = open(self.args.configFile, 'r')
+            config_file = open(self.args.configFile, 'r')
             try:
-                config.readfp(f)
+                config.readfp(config_file)
             finally:
-                f.close()
-        except IOError as e:
-            logging.fatal('Unable to read configuration file: {}'.format(e))
+                config_file.close()
+        except IOError as exc:
+            logging.fatal('Unable to read configuration file: {}'.format(exc))
             sys.exit(1)
 
         image_name = config.get('openstack', 'image_name')
@@ -76,14 +77,16 @@ class CloudManager(object):
             self.nics = [{'net-id': unicode_net_id}]
         else:
             self.nics = []
-        self.ssh_security_group =  config.get('openstack', 'ssh_security_group')
+        self.ssh_security_group = config.get('openstack', 'ssh_security_group')
 
-        self._creds = self.get_nova_creds()
+        self._creds = {}
+        self._set_nova_creds()
+        self._safe_username = self._creds['username'].replace('.', '')
         self.nova = client.Client(**self._creds)
 
         if add_ssh_key:
             # Upload ssh public key
-            self.key = "{}-qserv".format(self._creds['safe_username'])
+            self.key = "{}-qserv".format(self._safe_username)
         else:
             self.key = None
 
@@ -92,21 +95,17 @@ class CloudManager(object):
         self.flavor = self.nova.flavors.find(name=flavor_name)
 
 
-    def get_nova_creds(self):
+    def _set_nova_creds(self):
         """
         Extract the login information from the environment
         """
-        creds = {}
-        creds['version'] = 2
-        creds['username'] = os.environ['OS_USERNAME']
-        creds['api_key'] = os.environ['OS_PASSWORD']
-        creds['auth_url'] = os.environ['OS_AUTH_URL']
-        creds['project_id'] = os.environ['OS_TENANT_NAME']
-        creds['insecure'] = True
-        creds['safe_username'] = creds['username'].replace('.', '')
-        logging.debug("Openstack user: {}".format(creds['username']))
-
-        return creds
+        self._creds['version'] = 2
+        self._creds['username'] = os.environ['OS_USERNAME']
+        self._creds['api_key'] = os.environ['OS_PASSWORD']
+        self._creds['auth_url'] = os.environ['OS_AUTH_URL']
+        self._creds['project_id'] = os.environ['OS_TENANT_NAME']
+        self._creds['insecure'] = True
+        logging.debug("Openstack user: {}".format(self._creds['username']))
 
     def nova_image_create(self, instance, _image_name):
         """
@@ -125,12 +124,16 @@ class CloudManager(object):
         """
         Boot an instance and check status
         """
-        instance_name = "{0}-qserv-{1}".format(self._creds['safe_username'], instance_id)
+        instance_name = "{0}-qserv-{1}".format(self._safe_username, instance_id)
         logging.info("Launch an instance {}".format(instance_name))
 
         # Launch an instance from an image
-        instance = self.nova.servers.create(name=instance_name, image=self.image,
-                                            flavor=self.flavor, userdata=userdata, key_name=self.key, nics=self.nics)
+        instance = self.nova.servers.create(name=instance_name,
+                                            image=self.image,
+                                            flavor=self.flavor,
+                                            userdata=userdata,
+                                            key_name=self.key,
+                                            nics=self.nics)
         # Poll at 5 second intervals, until the status is no longer 'BUILD'
         status = instance.status
         while status == 'BUILD':
@@ -151,9 +154,9 @@ class CloudManager(object):
         while not end_word:
             time.sleep(15)
             output = instance.get_console_output()
-            #logging.debug("output: {}".format(output))
+            logging.debug("console output: {}".format(output))
+            logging.debug("instance: {}".format(instance))
             end_word = re.search(check_word, output)
-            #logging.debug("----------------------------")
 
     def nova_servers_delete(self, vm_name):
         """
@@ -233,7 +236,7 @@ class CloudManager(object):
         f.write(ssh_config_extract)
         f.close()
 
-    def check_ssh_up(self,instances):
+    def check_ssh_up(self, instances):
 
         for instance in instances:
             cmd = ['ssh', '-t', '-F', './ssh_config', instance.name, 'true']
@@ -242,11 +245,11 @@ class CloudManager(object):
                 try:
                     check_output(cmd)
                     success = True
-                except CalledProcessError as e:
-                    logging.warn("Waiting for ssh to be avalaible on {}:".format(instance.name, e.output))
-                    logging.debug("ssh available on {}".format(instance.name))
+                except CalledProcessError as exc:
+                    logging.warn("Waiting for ssh to be avalaible on {}: {}".format(instance.name, exc.output))
+            logging.debug("ssh available on {}".format(instance.name))
 
-    def update_etc_hosts(self,instances):
+    def update_etc_hosts(self, instances):
         """
         Modify /etc/hosts on each machine
         """

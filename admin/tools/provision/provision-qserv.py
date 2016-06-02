@@ -61,9 +61,12 @@ def get_cloudconfig():
 
 if __name__ == "__main__":
     try:
-        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s %(message)s',level=logging.DEBUG)
+        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s'
+                                   ' %(message)s',
+                            level=logging.DEBUG)
         # Disable request package logger and warnings
         logging.getLogger("requests").setLevel(logging.ERROR)
+        logging.getLogger("urllib3").setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")
 
         # CC-IN2P3
@@ -102,7 +105,8 @@ if __name__ == "__main__":
 
         # Create gateway instance and add floating_ip to it
         gateway_id = 0
-        gateway_instance = cloudManager.nova_servers_create(gateway_id, userdata)
+        gateway_instance = cloudManager.nova_servers_create(gateway_id,
+                                                            userdata)
         logging.info("Add floating ip ({0}) to {1}".format(floating_ip,
             gateway_instance.name))
         gateway_instance.add_floating_ip(floating_ip)
@@ -114,8 +118,9 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1,3):
-            worker_instance = cloudManager.nova_servers_create(instance_id, userdata)
+        for instance_id in range(1, 3):
+            worker_instance = cloudManager.nova_servers_create(instance_id,
+                                                               userdata)
             instances.append(worker_instance)
 
         cloudManager.print_ssh_config(instances, floating_ip)
