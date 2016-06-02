@@ -64,7 +64,7 @@ if __name__ == "__main__":
         logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s'
                                    ' %(message)s',
                             level=logging.DEBUG)
-        # Disable request package logger and warnings
+        # Disable requests and urllib3 package logger and warnings
         logging.getLogger("requests").setLevel(logging.ERROR)
         logging.getLogger("urllib3").setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")
