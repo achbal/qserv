@@ -9,10 +9,12 @@
 # -------------------------------
 #  Imports of standard modules --
 # -------------------------------
-from subprocess import CalledProcessError, check_output
+import argparse
+import ConfigParser
 import logging
 import os
 import re
+from subprocess import CalledProcessError, check_output
 import sys
 import time
 
@@ -26,15 +28,55 @@ import novaclient.exceptions
 # Exported definitions --
 # -----------------------
 class CloudManager(object):
-    """A simple example class"""
+    """Application class for common definitions of provison qserv"""
 
-    def __init__(self, image_name, flavor_name, network_name, nics, security_groups=None, add_ssh_key=False):
+    def __init__(self, add_ssh_key=False):
         """
-        Constructor
+        Constructor parse all arguments
+
+        @param add_ssh_key Add ssh key only while launching instances in provision qserv.
         """
-        self.network_name = network_name
-        self.nics = nics
-        self.ssh_security_group = security_groups
+        # define all command-line arguments
+        parser = argparse.ArgumentParser(description='Single-node data loading script for Qserv.')
+
+        parser.add_argument('-v', '--verbose', dest='verbose', default=[], action='append_const',
+                            const=None, help='More verbose output, can use several times.')
+        parser.add_argument('--verbose-all', dest='verboseAll', default=False, action='store_true',
+                            help='Apply verbosity to all loggers, by default only loader level is set.')
+        # parser = lsst.qserv.admin.logger.add_logfile_opt(parser)
+        group = parser.add_argument_group('Cloud configuration options',
+                                           'Options defining parameters to access remote cloud-platform')
+
+        group.add_argument('-f', '--config', dest='configFile',
+                            required=True, metavar='PATH',
+                            help='TODO')
+
+        # parse all arguments
+        self.args = parser.parse_args()
+
+        logging.debug("Use configuration file: {}".format(self.args.configFile))
+
+        config = ConfigParser.ConfigParser({'net-id': None, 'ssh_security_group': None})
+
+        try:
+            f = open(self.args.configFile, 'r')
+            try:
+                config.readfp(f)
+            finally:
+                f.close()
+        except IOError as e:
+            logging.fatal('Unable to read configuration file: {}'.format(e))
+            sys.exit(1)
+
+        image_name = config.get('openstack', 'image_name')
+        flavor_name = config.get('openstack', 'flavor_name')
+        self.network_name = config.get('openstack', 'network_name')
+        if config.get('openstack', 'net-id'):
+            unicode_net_id = unicode(config.get('openstack', 'net-id'))
+            self.nics = [{'net-id': unicode_net_id}]
+        else:
+            self.nics = []
+        self.ssh_security_group =  config.get('openstack', 'ssh_security_group')
 
         self._creds = self.get_nova_creds()
         self.nova = client.Client(**self._creds)
@@ -42,8 +84,6 @@ class CloudManager(object):
         if add_ssh_key:
             # Upload ssh public key
             self.key = "{}-qserv".format(self._creds['safe_username'])
-            # Remove unsafe characters
-            #self.key = self.key.replace('.', '')
         else:
             self.key = None
 
@@ -74,21 +114,18 @@ class CloudManager(object):
         """
         logging.info("Creating Qserv image")
         qserv_image = instance.create_image(_image_name)
-        status = self.nova.images.get(qserv_image).status
+        status = None
         while status != 'ACTIVE':
             time.sleep(5)
             status = self.nova.images.get(qserv_image).status
-        logging.debug("SUCCESS: Qserv image created")
-        logging.info("status: {}".format(status))
-        logging.info("Image {} is active".format(_image_name))
-
+        logging.info("SUCCESS: Qserv image '{}' created and active".format(_image_name))
         return qserv_image
 
     def nova_servers_create(self, instance_id, userdata):
         """
         Boot an instance and check status
         """
-        instance_name = "{}-qserv-{:02d}".format(self._creds['safe_username'], instance_id)
+        instance_name = "{0}-qserv-{1}".format(self._creds['safe_username'], instance_id)
         logging.info("Launch an instance {}".format(instance_name))
 
         # Launch an instance from an image
@@ -109,17 +146,14 @@ class CloudManager(object):
         """
         Add clean wait for cloud-init completion
         """
-        checkConfig = "---SYSTEM READY FOR SNAPSHOT---"
-        is_finished = False
-        while not is_finished:
+        check_word = "---SYSTEM READY FOR SNAPSHOT---"
+        end_word = None
+        while not end_word:
             time.sleep(15)
             output = instance.get_console_output()
             #logging.debug("output: {}".format(output))
-            word = re.search(checkConfig, output)
-            #logging.debug("word: {}".format(word))
+            end_word = re.search(check_word, output)
             #logging.debug("----------------------------")
-            if word != None:
-                is_finished = True
 
     def nova_servers_delete(self, vm_name):
         """
@@ -173,7 +207,6 @@ class CloudManager(object):
         """
         # ssh config
         ssh_config_tpl = '''
-
         Host {host}
         HostName {fixed_ip}
         User qserv
@@ -194,12 +227,24 @@ class CloudManager(object):
                                                         fixed_ip=fixed_ip,
                                                         floating_ip=floating_ip.ip,
                                                         key_filename=self.key_filename)
-
-        logging.debug("SSH client config: ")
+        logging.debug("Create SSH client config ")
 
         f = open("ssh_config", "w")
         f.write(ssh_config_extract)
         f.close()
+
+    def check_ssh_up(self,instances):
+
+        for instance in instances:
+            cmd = ['ssh', '-t', '-F', './ssh_config', instance.name, 'true']
+            success = False
+            while not success:
+                try:
+                    check_output(cmd)
+                    success = True
+                except CalledProcessError as e:
+                    logging.warn("Waiting for ssh to be avalaible on {}:".format(instance.name, e.output))
+                    logging.debug("ssh available on {}".format(instance.name))
 
     def update_etc_hosts(self,instances):
         """
@@ -212,7 +257,6 @@ class CloudManager(object):
             # Collect IP adresses
             fixed_ip = instance.networks[self.network_name][0]
             hostfile += hostfile_tpl.format(host=instance.name, ip=fixed_ip)
-
         # logging.debug("hostfile.txt:\n---\n{}\n---".format(hostfile))
 
         # Update /etc/hosts on each machine

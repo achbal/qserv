@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 """
-Create a snapshot from an instance, and use cloud config to install docker on VM
+Create an image by taking a snapshot from an instance, and use cloud config to install docker on VM
 
 Script performs these tasks:
   - launch instances from image
   - install docker via cloud-init
   - create a snapshot
   - shut down and delete the instance created
-
 
 @author  Oualid Achbal, ISIMA student , IN2P3
 
@@ -61,9 +60,9 @@ def get_cloudconfig():
               fsfreeze -f / && read x; fsfreeze -u /
               echo "---SYSTEM READY FOR SNAPSHOT---") &
 
-        #package_upgrade: true
-        #package_reboot_if_required: true
-        #timezone: Europe/Paris
+        package_upgrade: true
+        package_reboot_if_required: true
+        timezone: Europe/Paris
         '''
     return userdata
 
@@ -94,17 +93,17 @@ if __name__ == "__main__":
         network_name = "LSST-net"
         nics = [{'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174'}]
 
-        cloudManager = cloudmanager.CloudManager(image_name, flavor_name, network_name, nics)
+        cloudManager = cloudmanager.CloudManager(add_ssh_key=False)
 
         userdata = get_cloudconfig()
 
-        instance = cloudManager.nova_servers_create(0, userdata)
+        instance_id = "source"
+        instance = cloudManager.nova_servers_create(instance_id, userdata)
 
         # Wait for cloud config completion
         cloudManager.detect_end_cloud_config(instance)
 
-        # Take a snapshot
-        qserv_image = cloudManager.nova_image_create(instance, _image_name=_image_name)
+        qserv_image = cloudManager.nova_image_create(instance, _image_name)
 
         # Delete instance after taking a snapshot
         cloudManager.nova_servers_delete(instance.name)

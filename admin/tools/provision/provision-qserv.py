@@ -79,13 +79,13 @@ if __name__ == "__main__":
         # nics = []
 
         # NCSA
-        image_name = "centos-7-qserv"
-        flavor_name = "m1.medium"
-        network_name = "LSST-net"
-        nics = [{'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174'}]
-        ssh_security_group = "Remote SSH"
+        # image_name = "centos-7-qserv"
+        # flavor_name = "m1.medium"
+        # network_name = "LSST-net"
+        # nics = [{'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174'}]
+        # ssh_security_group = "Remote SSH"
 
-        cloudManager = cloudmanager.CloudManager(image_name, flavor_name, network_name, nics, ssh_security_group, add_ssh_key=True)
+        cloudManager = cloudmanager.CloudManager(add_ssh_key=True)
 
         cloudManager.manage_ssh_key()
 
@@ -122,6 +122,8 @@ if __name__ == "__main__":
 
         # Wait for cloud config completion for the last instance
         cloudManager.detect_end_cloud_config(instances[-1])
+
+        cloudManager.check_ssh_up(instances)
 
         cloudManager.update_etc_hosts(instances)
 
