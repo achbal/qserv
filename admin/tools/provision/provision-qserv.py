@@ -51,6 +51,21 @@ def get_cloudconfig():
 
         runcmd:
         - ['/tmp/detect_end_cloud_config.sh']
+        - [mkdir, -p, '/qserv/data']
+        - [mkdir, -p, '/qserv/log']
+        - [chown, "1000:1000", '/qserv/data']
+        - [chown, "1000:1000", '/qserv/log']
+        # Allow docker to start via cloud-init
+        # see https://github.com/projectatomic/docker-storage-setup/issues/77
+        - [ sed, -i, -e, 's/After=cloud-final.service/#After=cloud-final.service/g',
+          /usr/lib/systemd/system/docker-storage-setup.service]
+        # 'overlay' seems more robust than default setting
+        - [ sed, -i, -e, '$a STORAGE_DRIVER=overlay', /etc/sysconfig/docker-storage-setup ]
+        # overlay and selinux are not compliant in docker 1.9
+        - [ sed, -i, -e, "s/OPTIONS='--selinux-enabled'/# OPTIONS='--selinux-enabled'/", /etc/sysconfig/docker ]
+        - [ /bin/systemctl, daemon-reload]
+        - [ /bin/systemctl, restart,  docker.service]
+
         '''
     fpubkey = open(os.path.expanduser(cloudManager.key_filename + ".pub"))
     public_key=fpubkey.read()
