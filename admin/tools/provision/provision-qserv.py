@@ -76,6 +76,7 @@ def get_cloudconfig():
 
 if __name__ == "__main__":
     try:
+        # Configure logging
         logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s'
                                    ' %(message)s',
                             level=logging.DEBUG)
@@ -84,24 +85,6 @@ if __name__ == "__main__":
         logging.getLogger("urllib3").setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")
 
-        # CC-IN2P3
-        # image_name = "CentOS-7-x86_64-GenericCloud"
-        # flavor_name = "m1.medium"
-        # network_name = "lsst"
-        # nics = []
-
-        # Petasky
-        # image_name = "CentOS 7"
-        # flavor_name = "c1.medium"
-        # network_name = "petasky-net"
-        # nics = []
-
-        # NCSA
-        # image_name = "centos-7-qserv"
-        # flavor_name = "m1.medium"
-        # network_name = "LSST-net"
-        # nics = [{'net-id': u'fc77a88d-a9fb-47bb-a65d-39d1be7a7174'}]
-        # ssh_security_group = "Remote SSH"
 
         cloudManager = cloudmanager.CloudManager(add_ssh_key=True)
 
@@ -111,7 +94,7 @@ if __name__ == "__main__":
         floating_ip = cloudManager.get_floating_ip()
         if not floating_ip:
             logging.fatal("Unable to add public ip to Qserv gateway")
-            sys.exit(2)
+            sys.exit(1)
 
         userdata = get_cloudconfig()
 
@@ -133,7 +116,8 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1, 3):
+        NB_WORKERS = 3
+        for instance_id in range(1, NB_WORKERS):
             worker_instance = cloudManager.nova_servers_create(instance_id,
                                                                userdata)
             instances.append(worker_instance)
@@ -152,4 +136,4 @@ if __name__ == "__main__":
 
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)
-        sys.exit(3)
+        sys.exit(1)

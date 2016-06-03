@@ -200,7 +200,7 @@ class CloudManager(object):
                 floating_ip = self.nova.floating_ips.create(floating_ip_pool)
             except novaclient.exceptions.Forbidden as e:
                 logging.fatal("Unable to retrieve public IP: {0}".format(e))
-                sys.exit(4)
+                sys.exit(1)
 
         return floating_ip
 
@@ -270,6 +270,6 @@ class CloudManager(object):
                 check_output(cmd)
             except CalledProcessError as exc:
                 logging.error("ERROR while updating /etc/hosts: {}".format(exc.output))
-                sys.exit(5)
+                sys.exit(1)
 
 
