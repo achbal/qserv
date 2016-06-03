@@ -30,6 +30,8 @@ import warnings
 # ----------------------------
 import cloudmanager
 
+NB_SERVER = 5
+
 # -----------------------
 # Exported definitions --
 # -----------------------
@@ -51,6 +53,15 @@ def get_cloudconfig():
 
         runcmd:
         - ['/tmp/detect_end_cloud_config.sh']
+        - [mkdir, -p, '/qserv/data']
+        - [mkdir, -p, '/qserv/log']
+        - [chown, "1000:1000", '/qserv/data']
+        - [chown, "1000:1000", '/qserv/log']
+        - [sed, -i, -e, 's/After=cloud-final.service/# After=cloud-final.service/g', /usr/lib/systemd/system/docker-storage-setup.service] 
+        - [sed, -i, -e, '$a STORAGE_DRIVER=overlay', /etc/sysconfig/docker-storage-setup ]
+        - [sed, -i, -e, "s/OPTIONS='--selinux-enabled'/# OPTIONS='--selinux-enabled'/", /etc/sysconfig/docker]
+        - [/bin/systemctl, daemon-reload]
+        - [/bin/systemctl, restart,  docker.service]
         '''
     fpubkey = open(os.path.expanduser(cloudManager.key_filename + ".pub"))
     public_key=fpubkey.read()
@@ -118,7 +129,7 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1, 3):
+        for instance_id in range(1, NB_SERVER):
             worker_instance = cloudManager.nova_servers_create(instance_id,
                                                                userdata)
             instances.append(worker_instance)
