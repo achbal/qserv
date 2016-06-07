@@ -50,7 +50,15 @@ class CloudManager(object):
 
         group.add_argument('-f', '--config', dest='configFile',
                             required=True, metavar='PATH',
-                            help='TODO')
+                            help='Add cloud config file where server characteristics are provided')
+
+        group.add_argument('-i', '--image-name', dest='snapshot_name',
+                           required=False, default='centos-7-qserv',
+                           help='Choose the name of the image from which the servers will be booted')
+
+        group.add_argument('-n', '--nb-servers', dest='nbServers',
+                           required=False, default=3, type=int,
+                           help='Choose the number of servers to boot')
 
         # parse all arguments
         self.args = parser.parse_args()
@@ -95,6 +103,17 @@ class CloudManager(object):
         self.image = self.nova.images.find(name=image_name)
         self.flavor = self.nova.flavors.find(name=flavor_name)
 
+    def get_image_name(self):
+        """
+        Get snapshot name
+        """
+        return self.args.snapshot_name
+
+    def get_nb_servers(self):
+        """
+        Get number of servers to boot
+        """
+        return self.args.nbServers
 
     def _set_nova_creds(self):
         """
@@ -108,18 +127,17 @@ class CloudManager(object):
         self._creds['insecure'] = True
         logging.debug("Openstack user: {}".format(self._creds['username']))
 
-    def nova_image_create(self, instance, _image_name):
+    def nova_image_create(self, instance):
         """
         Create an openstack image containing Docker
         """
         logging.info("Creating Qserv image")
-        qserv_image = instance.create_image(_image_name)
+        qserv_image = instance.create_image(self.get_image_name())
         status = None
         while status != 'ACTIVE':
             time.sleep(5)
             status = self.nova.images.get(qserv_image).status
-        logging.info("SUCCESS: Qserv image '{}' created and active".format(_image_name))
-        return qserv_image
+        logging.info("SUCCESS: Qserv image '{}' created and active".format(self.get_image_name()))
 
     def nova_servers_create(self, instance_id, userdata):
         """

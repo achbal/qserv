@@ -86,9 +86,6 @@ if __name__ == "__main__":
 
         cloudManager = cloudmanager.CloudManager(add_ssh_key=True)
 
-        #NB_WORKERS = input("Enter a number of instances to launch : ")
-        NB_WORKERS = 3
-
         cloudManager.manage_ssh_key()
 
         # Find a floating ip for gateway
@@ -117,7 +114,7 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1, NB_WORKERS):
+        for instance_id in range(1, cloudManager.get_nb_servers()):
             worker_instance = cloudManager.nova_servers_create(instance_id,
                                                                userdata)
             instances.append(worker_instance)

@@ -9,7 +9,7 @@ Script performs these tasks:
   - create a snapshot
   - shut down and delete the instance created
 
-@author  Oualid Achbal, IN2P3
+@author  Oualid Achbal, ISIMA student , IN2P3
 
 """
 
@@ -36,6 +36,14 @@ def get_cloudconfig():
         #cloud-config
         groups:
         - docker
+
+        #users:
+        #- name: qserv
+        #gecos: Qserv daemon
+        ##groups: docker
+        #lock-passwd: true
+        #shell: /bin/bash
+        #sudo: ALL=(ALL) NOPASSWD:ALL
 
         packages:
         - docker
@@ -89,8 +97,7 @@ if __name__ == "__main__":
         # Wait for cloud config completion
         cloudManager.detect_end_cloud_config(instance)
 
-        _image_name = "centos-7-qserv"
-        qserv_image = cloudManager.nova_image_create(instance, _image_name)
+        cloudManager.nova_image_create(instance)
 
         # Delete instance after taking a snapshot
         cloudManager.nova_servers_delete(instance.name)
