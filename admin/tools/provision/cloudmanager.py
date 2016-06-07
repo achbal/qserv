@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 """
+Different methods used for creation of the snapshot and provision qserv
 
-@author  Oualid Achbal, ISIMA student , IN2P3
+@author  Oualid Achbal, IN2P3
 
 """
 
@@ -28,7 +29,7 @@ import novaclient.exceptions
 # Exported definitions --
 # -----------------------
 class CloudManager(object):
-    """Application class for common definitions of provison qserv"""
+    """Application class for common definitions of provision qserv and creation of image"""
 
     def __init__(self, add_ssh_key=False):
         """
@@ -84,8 +85,8 @@ class CloudManager(object):
         self._safe_username = self._creds['username'].replace('.', '')
         self.nova = client.Client(**self._creds)
 
+        # Upload ssh public key
         if add_ssh_key:
-            # Upload ssh public key
             self.key = "{}-qserv".format(self._safe_username)
         else:
             self.key = None
@@ -198,8 +199,8 @@ class CloudManager(object):
             try:
                 logging.debug("Use floating ip pool: {}".format(floating_ip_pool))
                 floating_ip = self.nova.floating_ips.create(floating_ip_pool)
-            except novaclient.exceptions.Forbidden as e:
-                logging.fatal("Unable to retrieve public IP: {0}".format(e))
+            except novaclient.exceptions.Forbidden as exc:
+                logging.fatal("Unable to retrieve public IP: {0}".format(exc))
                 sys.exit(1)
 
         return floating_ip
@@ -222,7 +223,6 @@ class CloudManager(object):
         IdentitiesOnly yes
         LogLevel FATAL
         '''
-
         ssh_config_extract = ""
         for instance in instances:
             fixed_ip = instance.networks[self.network_name][0]
@@ -251,7 +251,7 @@ class CloudManager(object):
 
     def update_etc_hosts(self, instances):
         """
-        Modify /etc/hosts on each machine
+        Update /etc/hosts on each machine
         """
         hostfile_tpl = "{ip}    {host}\n"
 
@@ -260,9 +260,7 @@ class CloudManager(object):
             # Collect IP adresses
             fixed_ip = instance.networks[self.network_name][0]
             hostfile += hostfile_tpl.format(host=instance.name, ip=fixed_ip)
-        # logging.debug("hostfile.txt:\n---\n{}\n---".format(hostfile))
 
-        # Update /etc/hosts on each machine
         for instance in instances:
             cmd = ['ssh', '-t', '-F', './ssh_config', instance.name,
                    'sudo sh -c "echo \'{hostfile}\' >> /etc/hosts"'.format(hostfile=hostfile)]

@@ -13,7 +13,7 @@ Script performs these tasks:
   - update /etc/hosts on each VM
   - print ssh client config
 
-@author  Oualid Achbal, ISIMA student , IN2P3
+@author  Oualid Achbal, IN2P3
 
 """
 
@@ -65,7 +65,6 @@ def get_cloudconfig():
         - [ sed, -i, -e, "s/OPTIONS='--selinux-enabled'/# OPTIONS='--selinux-enabled'/", /etc/sysconfig/docker ]
         - [ /bin/systemctl, daemon-reload]
         - [ /bin/systemctl, restart,  docker.service]
-
         '''
     fpubkey = open(os.path.expanduser(cloudManager.key_filename + ".pub"))
     public_key=fpubkey.read()
@@ -85,8 +84,10 @@ if __name__ == "__main__":
         logging.getLogger("urllib3").setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")
 
-
         cloudManager = cloudmanager.CloudManager(add_ssh_key=True)
+
+        #NB_WORKERS = input("Enter a number of instances to launch : ")
+        NB_WORKERS = 3
 
         cloudManager.manage_ssh_key()
 
@@ -116,7 +117,6 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        NB_WORKERS = 3
         for instance_id in range(1, NB_WORKERS):
             worker_instance = cloudManager.nova_servers_create(instance_id,
                                                                userdata)

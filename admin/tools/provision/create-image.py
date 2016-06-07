@@ -9,7 +9,7 @@ Script performs these tasks:
   - create a snapshot
   - shut down and delete the instance created
 
-@author  Oualid Achbal, ISIMA student , IN2P3
+@author  Oualid Achbal, IN2P3
 
 """
 
@@ -34,9 +34,6 @@ def get_cloudconfig():
     """
     userdata = '''
         #cloud-config
-        users:
-        - name: qserv
-
         groups:
         - docker
 
@@ -67,6 +64,7 @@ def get_cloudconfig():
         package_reboot_if_required: true
         timezone: Europe/Paris
         '''
+
     return userdata
 
 

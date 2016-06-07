@@ -9,15 +9,17 @@
 # @author  Oualid Achbal, IN2P3
 
 
-set -e
-
 # Source the cloud openrc file
 #. ./LSST-openrc.sh
 #. ./petasky-openrc.sh
 #. ./lsst-openrc.sh
 
+set -e
+set -x
+
 # Delete the previous instances for a new test
 nova list | grep "$OS_USERNAME-qserv" | cut -d'|' -f 2| xargs nova delete
+
 # Delete the snapshot created for a new test
 nova image-delete centos-7-qserv
 
