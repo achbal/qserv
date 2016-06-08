@@ -100,8 +100,7 @@ if __name__ == "__main__":
         cloudManager.nova_image_create(instance_for_snapshot)
 
         # Delete instance after taking a snapshot
-        #instance_for_snapshot.
-        cloudManager.nova_servers_delete(instance_for_snapshot.name)
+        cloudManager.nova_servers_delete(instance_for_snapshot)
 
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)

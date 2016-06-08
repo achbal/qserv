@@ -174,12 +174,10 @@ class CloudManager(object):
             logging.debug("instance: {}".format(instance))
             end_word = re.search(check_word, output)
 
-    def nova_servers_delete(self, vm_name):
+    def nova_servers_delete(self, server):
         """
-        Retrieve an instance by name and shut it down
+        Shut down and delete a server
         """
-        server = self.nova.servers.find(name=vm_name)
-        #server.get()
         server.delete()
 
     def manage_ssh_key(self):
