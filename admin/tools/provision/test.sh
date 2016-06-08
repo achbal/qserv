@@ -19,7 +19,10 @@ set -e
 # Choose a number of instances to boot
 NB_SERVERS=3
 
-# Choose the snapshot name
+# Choose the cloud conf file which contain instance parameters
+CONF_FILE="ncsa.conf"
+
+# Choose snapshot name and update the cloud conf file chosen
 SNAPSHOT_NAME="centos-7-qserv"
 
 # Move to openstackclient CLI
@@ -32,7 +35,7 @@ if [ "$PREVIOUS_INSTANCE_IDS" ]
 then
 	openstack server delete $PREVIOUS_INSTANCE_IDS
 else
-	echo "no existing servers to delete"
+	echo "No existing servers to delete"
 fi
 
 # Delete the snapshot created for a new test
@@ -42,16 +45,16 @@ if [ "$PREVIOUS_IMAGE_ID" ]
 then
 	openstack image delete $PREVIOUS_IMAGE_ID
 else
-	echo "no existing image denoted $SNAPSHOT_NAME to delete"
+	echo "No existing image denoted $SNAPSHOT_NAME to delete"
 fi
 
 set -x
 
 # Take a snapshot
-python create-image.py -f ncsa.conf -i "$SNAPSHOT_NAME"
+python create-image.py -f "$CONF_FILE"
 
 # Execute provision-qserv with an input cloud conf file
-python provision-qserv.py -f ncsa.provision.conf -n "$NB_SERVERS"
+python provision-qserv.py -f "$CONF_FILE" -n "$NB_SERVERS"
 
 # TODO Add Warning message
 cp ~/.ssh/config ~/.ssh/config.backup
@@ -71,7 +74,7 @@ sed -i -e "s/WORKER_LAST_ID=3/WORKER_LAST_ID=$NB_SERVERS/" env.sh
 #http://web.taranis.org/shmux/
 
 # Run multi node tests
-#./run-multinode-tests.sh
+./run-multinode-tests.sh
 
 #cp ~/.ssh/config.backup ~/.ssh/config
 

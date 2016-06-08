@@ -37,13 +37,13 @@ def get_cloudconfig():
         groups:
         - docker
 
-        #users:
-        #- name: qserv
-        #gecos: Qserv daemon
-        ##groups: docker
-        #lock-passwd: true
-        #shell: /bin/bash
-        #sudo: ALL=(ALL) NOPASSWD:ALL
+        users:
+        - name: qserv
+          gecos: Qserv daemon
+          groups: docker
+          lock-passwd: true
+          shell: /bin/bash
+          sudo: ALL=(ALL) NOPASSWD:ALL
 
         packages:
         - docker
