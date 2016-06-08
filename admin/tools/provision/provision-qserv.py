@@ -84,7 +84,7 @@ if __name__ == "__main__":
         logging.getLogger("urllib3").setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")
 
-        cloudManager = cloudmanager.CloudManager(add_ssh_key=True)
+        cloudManager = cloudmanager.CloudManager(go_for_snapshot=True, add_ssh_key=True)
 
         cloudManager.manage_ssh_key()
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             logging.fatal("Unable to add public ip to Qserv gateway")
             sys.exit(1)
 
-        userdata = get_cloudconfig()
+        userdata_provision = get_cloudconfig()
 
         # Create instances list
         instances = []
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         # Create gateway instance and add floating_ip to it
         gateway_id = 0
         gateway_instance = cloudManager.nova_servers_create(gateway_id,
-                                                            userdata)
+                                                            userdata_provision)
         logging.info("Add floating ip ({0}) to {1}".format(floating_ip,
             gateway_instance.name))
         gateway_instance.add_floating_ip(floating_ip)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         # Create worker instances
         for instance_id in range(1, cloudManager.get_nb_servers()):
             worker_instance = cloudManager.nova_servers_create(instance_id,
-                                                               userdata)
+                                                               userdata_provision)
             instances.append(worker_instance)
 
         cloudManager.print_ssh_config(instances, floating_ip)

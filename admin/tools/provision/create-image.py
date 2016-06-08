@@ -87,20 +87,21 @@ if __name__ == "__main__":
         logging.getLogger("urllib3").setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")
 
-        cloudManager = cloudmanager.CloudManager(add_ssh_key=False)
+        cloudManager = cloudmanager.CloudManager()
 
-        userdata = get_cloudconfig()
+        userdata_snapshot = get_cloudconfig()
 
         instance_id = "source"
-        instance = cloudManager.nova_servers_create(instance_id, userdata)
+        instance_for_snapshot = cloudManager.nova_servers_create(instance_id, userdata_snapshot)
 
         # Wait for cloud config completion
-        cloudManager.detect_end_cloud_config(instance)
+        cloudManager.detect_end_cloud_config(instance_for_snapshot)
 
-        cloudManager.nova_image_create(instance)
+        cloudManager.nova_image_create(instance_for_snapshot)
 
         # Delete instance after taking a snapshot
-        cloudManager.nova_servers_delete(instance.name)
+        #instance_for_snapshot.
+        cloudManager.nova_servers_delete(instance_for_snapshot.name)
 
     except Exception as exc:
         logging.critical('Exception occured: %s', exc, exc_info=True)

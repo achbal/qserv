@@ -31,11 +31,12 @@ import novaclient.exceptions
 class CloudManager(object):
     """Application class for common definitions of provision qserv and creation of image"""
 
-    def __init__(self, add_ssh_key=False):
+    def __init__(self, go_for_snapshot=False, add_ssh_key=False):
         """
         Constructor parse all arguments
 
         @param add_ssh_key Add ssh key only while launching instances in provision qserv.
+        @param go_for_snapshot find new_image until it's created
         """
         # define all command-line arguments
         parser = argparse.ArgumentParser(description='Single-node data loading script for Qserv.')
@@ -50,11 +51,7 @@ class CloudManager(object):
 
         group.add_argument('-f', '--config', dest='configFile',
                             required=True, metavar='PATH',
-                            help='Add cloud config file where server characteristics are provided')
-
-        group.add_argument('-i', '--image-name', dest='snapshot_name',
-                           required=False, default='centos-7-qserv',
-                           help='Choose the name of the image from which the servers will be booted')
+                            help='Add cloud config file which contain instance characteristics')
 
         group.add_argument('-n', '--nb-servers', dest='nbServers',
                            required=False, default=3, type=int,
@@ -78,7 +75,8 @@ class CloudManager(object):
             logging.fatal('Unable to read configuration file: {}'.format(exc))
             sys.exit(1)
 
-        image_name = config.get('openstack', 'image_name')
+        base_image_name = config.get('openstack', 'base_image_name')
+        self.snapshot_name = config.get('openstack', 'snapshot_name')
         flavor_name = config.get('openstack', 'flavor_name')
         self.network_name = config.get('openstack', 'network_name')
         if config.get('openstack', 'net-id'):
@@ -100,14 +98,13 @@ class CloudManager(object):
             self.key = None
 
         self.key_filename = '~/.ssh/id_rsa'
-        self.image = self.nova.images.find(name=image_name)
-        self.flavor = self.nova.flavors.find(name=flavor_name)
 
-    def get_image_name(self):
-        """
-        Get snapshot name
-        """
-        return self.args.snapshot_name
+        if go_for_snapshot:
+            self.image = self.nova.images.find(name=self.snapshot_name)
+        else:
+            self.image = self.nova.images.find(name=base_image_name)
+
+        self.flavor = self.nova.flavors.find(name=flavor_name)
 
     def get_nb_servers(self):
         """
@@ -132,12 +129,12 @@ class CloudManager(object):
         Create an openstack image containing Docker
         """
         logging.info("Creating Qserv image")
-        qserv_image = instance.create_image(self.get_image_name())
+        qserv_image = instance.create_image(self.snapshot_name)
         status = None
         while status != 'ACTIVE':
             time.sleep(5)
             status = self.nova.images.get(qserv_image).status
-        logging.info("SUCCESS: Qserv image '{}' created and active".format(self.get_image_name()))
+        logging.info("SUCCESS: Qserv image '{}' created and active".format(self.snapshot_name))
 
     def nova_servers_create(self, instance_id, userdata):
         """
@@ -171,7 +168,7 @@ class CloudManager(object):
         check_word = "---SYSTEM READY FOR SNAPSHOT---"
         end_word = None
         while not end_word:
-            time.sleep(15)
+            time.sleep(10)
             output = instance.get_console_output()
             logging.debug("console output: {}".format(output))
             logging.debug("instance: {}".format(instance))
@@ -182,6 +179,7 @@ class CloudManager(object):
         Retrieve an instance by name and shut it down
         """
         server = self.nova.servers.find(name=vm_name)
+        #server.get()
         server.delete()
 
     def manage_ssh_key(self):
