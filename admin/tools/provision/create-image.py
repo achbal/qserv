@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 """
-Create an image by taking a snapshot from an instance, and use cloud config to install docker on VM
+Create an image containing Docker by taking
+a snapshot from an instance,
 
 Script performs these tasks:
-  - launch instances from image
+  - launch instance from image
   - install docker via cloud-init
+  - create a qserv user
   - create a snapshot
   - shut down and delete the instance created
 
@@ -16,6 +18,7 @@ Script performs these tasks:
 # -------------------------------
 #  Imports of standard modules --
 # -------------------------------
+import argparse
 import logging
 import sys
 import warnings
@@ -78,16 +81,15 @@ def get_cloudconfig():
 
 if __name__ == "__main__":
     try:
-        # Configure logging
-        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s'
-                                   ' %(message)s',
-                            level=logging.DEBUG)
-        # Disable requests and urllib3 package logger and warnings
-        logging.getLogger("requests").setLevel(logging.ERROR)
-        logging.getLogger("urllib3").setLevel(logging.ERROR)
-        warnings.filterwarnings("ignore")
+        parser = argparse.ArgumentParser(description='Create Openstack image containing Docker.')
 
-        cloudManager = cloudmanager.CloudManager()
+        cloudmanager.add_parser_args(parser)
+        args = parser.parse_args()
+
+        loggerName = "Provisioner"
+        cloudmanager.config_logger(loggerName, args.verbose, args.verboseAll)
+
+        cloudManager = cloudmanager.CloudManager(config_file_name=args.configFile)
 
         userdata_snapshot = get_cloudconfig()
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 """
-Boot instances from an image already created in cluster infrastructure, and use cloud config to create users
+Boot instances from an image already created containing Docker
+in cluster infrastructure, and use cloud config to create users
 on virtual machines
 
 Script performs these tasks:
@@ -20,6 +21,7 @@ Script performs these tasks:
 # -------------------------------
 #  Imports of standard modules --
 # -------------------------------
+import argparse
 import logging
 import os
 import sys
@@ -75,16 +77,19 @@ def get_cloudconfig():
 
 if __name__ == "__main__":
     try:
-        # Configure logging
-        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s'
-                                   ' %(message)s',
-                            level=logging.DEBUG)
-        # Disable requests and urllib3 package logger and warnings
-        logging.getLogger("requests").setLevel(logging.ERROR)
-        logging.getLogger("urllib3").setLevel(logging.ERROR)
-        warnings.filterwarnings("ignore")
+        # define command-line arguments
+        parser = argparse.ArgumentParser(description='Boot instances from image containing Docker.')
+        parser.add_argument('-n', '--nb-servers', dest='nbServers',
+                           required=False, default=3, type=int,
+                           help='Choose the number of servers to boot')
 
-        cloudManager = cloudmanager.CloudManager(go_for_snapshot=True, add_ssh_key=True)
+        cloudmanager.add_parser_args(parser)
+        args = parser.parse_args()
+
+        loggerName = "Provisioner"
+        cloudmanager.config_logger(loggerName, args.verbose, args.verboseAll)
+
+        cloudManager = cloudmanager.CloudManager(config_file_name=args.configFile, used_image_key=cloudmanager.SNAPSHOT_IMAGE_KEY, add_ssh_key=True)
 
         cloudManager.manage_ssh_key()
 
@@ -114,7 +119,7 @@ if __name__ == "__main__":
         instances.append(gateway_instance)
 
         # Create worker instances
-        for instance_id in range(1, cloudManager.get_nb_servers()):
+        for instance_id in range(1, args.nbServers):
             worker_instance = cloudManager.nova_servers_create(instance_id,
                                                                userdata_provision)
             instances.append(worker_instance)

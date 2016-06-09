@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 """
-Different methods used for creation of the snapshot and provision qserv
+Tools to ease Openstack infrastructure configuration
+and provisioning
 
 @author  Oualid Achbal, IN2P3
 
@@ -10,7 +11,6 @@ Different methods used for creation of the snapshot and provision qserv
 # -------------------------------
 #  Imports of standard modules --
 # -------------------------------
-import argparse
 import ConfigParser
 import logging
 import os
@@ -18,6 +18,7 @@ import re
 from subprocess import CalledProcessError, check_output
 import sys
 import time
+import warnings
 
 # ----------------------------
 # Imports for other modules --
@@ -28,45 +29,78 @@ import novaclient.exceptions
 # -----------------------
 # Exported definitions --
 # -----------------------
+
+BASE_IMAGE_KEY='base_image_name'
+SNAPSHOT_IMAGE_KEY='snapshot_name'
+
+def get_nova_creds():
+    """
+    Extract the login information from the environment
+    """
+    creds = {}
+    creds['version'] = 2
+    creds['username'] = os.environ['OS_USERNAME']
+    creds['api_key'] = os.environ['OS_PASSWORD']
+    creds['auth_url'] = os.environ['OS_AUTH_URL']
+    creds['project_id'] = os.environ['OS_TENANT_NAME']
+    creds['insecure'] = True
+    return creds
+
+def add_parser_args(parser):
+    """
+    Configure the parser
+    """
+    parser.add_argument('-v', '--verbose', dest='verbose', default=[], action='append_const',
+                        const=None, help='More verbose output, can use several times.')
+    parser.add_argument('--verbose-all', dest='verboseAll', default=False, action='store_true',
+                        help='Apply verbosity to all loggers, by default only loader level is set.')
+    # parser = lsst.qserv.admin.logger.add_logfile_opt(parser)
+    group = parser.add_argument_group('Cloud configuration options',
+                                       'Options defining parameters to access remote cloud-platform')
+
+    group.add_argument('-f', '--config', dest='configFile',
+                        required=True, metavar='PATH',
+                        help='Add cloud config file which contain instance characteristics')
+    return parser
+
+def config_logger(loggerName, verbose, verboseAll):
+    """
+    Configure the logger
+    """
+    verbosity = len(verbose)
+    levels = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
+    if not verboseAll:
+        # suppress INFO/DEBUG regular messages from other loggers
+        # Disable requests and urllib3 package logger and warnings
+        logging.getLogger("requests").setLevel(logging.ERROR)
+        logging.getLogger("urllib3").setLevel(logging.ERROR)
+
+    # Configure logging
+    logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s'
+                               ' %(message)s',
+                        level=levels.get(verbosity, logging.DEBUG))
+
+    warnings.filterwarnings("ignore")
+
+
 class CloudManager(object):
     """Application class for common definitions of provision qserv and creation of image"""
 
-    def __init__(self, go_for_snapshot=False, add_ssh_key=False):
+    def __init__(self, config_file_name, used_image_key=BASE_IMAGE_KEY, add_ssh_key=False):
         """
         Constructor parse all arguments
 
         @param add_ssh_key Add ssh key only while launching instances in provision qserv.
         @param go_for_snapshot find new_image until it's created
         """
-        # define all command-line arguments
-        parser = argparse.ArgumentParser(description='Single-node data loading script for Qserv.')
 
-        parser.add_argument('-v', '--verbose', dest='verbose', default=[], action='append_const',
-                            const=None, help='More verbose output, can use several times.')
-        parser.add_argument('--verbose-all', dest='verboseAll', default=False, action='store_true',
-                            help='Apply verbosity to all loggers, by default only loader level is set.')
-        # parser = lsst.qserv.admin.logger.add_logfile_opt(parser)
-        group = parser.add_argument_group('Cloud configuration options',
-                                           'Options defining parameters to access remote cloud-platform')
-
-        group.add_argument('-f', '--config', dest='configFile',
-                            required=True, metavar='PATH',
-                            help='Add cloud config file which contain instance characteristics')
-
-        group.add_argument('-n', '--nb-servers', dest='nbServers',
-                           required=False, default=3, type=int,
-                           help='Choose the number of servers to boot')
-
-        # parse all arguments
-        self.args = parser.parse_args()
-
-        logging.debug("Use configuration file: {}".format(self.args.configFile))
+        logging.debug("Use configuration file: {}".format(config_file_name))
 
         config = ConfigParser.ConfigParser({'net-id': None,
                                             'ssh_security_group': None})
 
         try:
-            config_file = open(self.args.configFile, 'r')
+            config_file = open(config_file_name, 'r')
             try:
                 config.readfp(config_file)
             finally:
@@ -75,9 +109,18 @@ class CloudManager(object):
             logging.fatal('Unable to read configuration file: {}'.format(exc))
             sys.exit(1)
 
-        base_image_name = config.get('openstack', 'base_image_name')
+        self._creds = get_nova_creds()
+        logging.debug("Openstack user: {}".format(self._creds['username']))
+        self._safe_username = self._creds['username'].replace('.', '')
+        self.nova = client.Client(**self._creds)
+
+        base_image_name = config.get('openstack', used_image_key)
         self.snapshot_name = config.get('openstack', 'snapshot_name')
+        self.image = self.nova.images.find(name=base_image_name)
+
         flavor_name = config.get('openstack', 'flavor_name')
+        self.flavor = self.nova.flavors.find(name=flavor_name)
+
         self.network_name = config.get('openstack', 'network_name')
         if config.get('openstack', 'net-id'):
             unicode_net_id = unicode(config.get('openstack', 'net-id'))
@@ -85,11 +128,6 @@ class CloudManager(object):
         else:
             self.nics = []
         self.ssh_security_group = config.get('openstack', 'ssh_security_group')
-
-        self._creds = {}
-        self._set_nova_creds()
-        self._safe_username = self._creds['username'].replace('.', '')
-        self.nova = client.Client(**self._creds)
 
         # Upload ssh public key
         if add_ssh_key:
@@ -99,30 +137,13 @@ class CloudManager(object):
 
         self.key_filename = '~/.ssh/id_rsa'
 
-        if go_for_snapshot:
-            self.image = self.nova.images.find(name=self.snapshot_name)
-        else:
-            self.image = self.nova.images.find(name=base_image_name)
 
-        self.flavor = self.nova.flavors.find(name=flavor_name)
 
     def get_nb_servers(self):
         """
         Get number of servers to boot
         """
         return self.args.nbServers
-
-    def _set_nova_creds(self):
-        """
-        Extract the login information from the environment
-        """
-        self._creds['version'] = 2
-        self._creds['username'] = os.environ['OS_USERNAME']
-        self._creds['api_key'] = os.environ['OS_PASSWORD']
-        self._creds['auth_url'] = os.environ['OS_AUTH_URL']
-        self._creds['project_id'] = os.environ['OS_TENANT_NAME']
-        self._creds['insecure'] = True
-        logging.debug("Openstack user: {}".format(self._creds['username']))
 
     def nova_image_create(self, instance):
         """
