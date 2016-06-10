@@ -2,7 +2,7 @@
 
 """
 Boot instances from an image already created containing Docker
-in cluster infrastructure, and use cloud config to create users
+in Openstack infrastructure, and use cloud config to create users
 on virtual machines
 
 Script performs these tasks:
@@ -76,7 +76,7 @@ def get_cloudconfig():
 
 if __name__ == "__main__":
     try:
-        # define command-line arguments
+        # Define command-line arguments
         parser = argparse.ArgumentParser(description='Boot instances from image containing Docker.')
         parser.add_argument('-n', '--nb-servers', dest='nbServers',
                            required=False, default=3, type=int,

@@ -13,7 +13,7 @@ set -e
 
 # Source the cloud openrc file
 . ./LSST-openrc.sh.example
-#. ./petasky-openrc.sh.example
+# . ./petasky-openrc.sh.example
 
 # Choose a number of instances to boot
 NB_SERVERS=3
