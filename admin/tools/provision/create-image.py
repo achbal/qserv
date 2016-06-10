@@ -21,7 +21,6 @@ Script performs these tasks:
 import argparse
 import logging
 import sys
-import warnings
 
 # ----------------------------
 # Imports for other modules --

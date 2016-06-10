@@ -60,7 +60,8 @@ def add_parser_args(parser):
 
     group.add_argument('-f', '--config', dest='configFile',
                         required=True, metavar='PATH',
-                        help='Add cloud config file which contain instance characteristics')
+                        help='Add cloud config file which contains instance characteristics')
+
     return parser
 
 def config_logger(loggerName, verbose, verboseAll):
@@ -75,7 +76,6 @@ def config_logger(loggerName, verbose, verboseAll):
         logging.getLogger("requests").setLevel(logging.ERROR)
         logging.getLogger("urllib3").setLevel(logging.ERROR)
 
-    # Configure logging
     logging.basicConfig(format='%(asctime)s %(levelname)-8s %(name)-15s'
                                ' %(message)s',
                         level=levels.get(verbosity, logging.DEBUG))
@@ -84,7 +84,7 @@ def config_logger(loggerName, verbose, verboseAll):
 
 
 class CloudManager(object):
-    """Application class for common definitions of provision qserv and creation of image"""
+    """Application class for common definitions for creation of snapshot and provision qserv"""
 
     def __init__(self, config_file_name, used_image_key=BASE_IMAGE_KEY, add_ssh_key=False):
         """
@@ -143,7 +143,8 @@ class CloudManager(object):
         """
         Get number of servers to boot
         """
-        return self.args.nbServers
+        args = None
+        return args.nbServers
 
     def nova_image_create(self, instance):
         """
@@ -272,7 +273,9 @@ class CloudManager(object):
         f.close()
 
     def check_ssh_up(self, instances):
-
+        """
+        Check if the ssh service started
+        """
         for instance in instances:
             cmd = ['ssh', '-t', '-F', './ssh_config', instance.name, 'true']
             success = False
@@ -286,7 +289,7 @@ class CloudManager(object):
 
     def update_etc_hosts(self, instances):
         """
-        Update /etc/hosts on each machine
+        Update /etc/hosts file on each machine
         """
         hostfile_tpl = "{ip}    {host}\n"
 
