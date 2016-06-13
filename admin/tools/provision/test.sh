@@ -8,30 +8,27 @@
 
 # @author  Oualid Achbal, IN2P3
 
-
 set -e
 
 # Source the cloud openrc file
-. ./LSST-openrc.sh.example
-# . ./petasky-openrc.sh.example
+# . ./LSST-openrc.sh.example
+. ./petasky-openrc.sh.example
 
 # Choose a number of instances to boot
 NB_SERVERS=3
 
 # Choose the cloud conf file which contains instance parameters
-CONF_FILE="ncsa.conf.example"
+CONF_FILE="galactica.conf.example"
 
 # Choose snapshot name and update the cloud conf file chosen
 SNAPSHOT_NAME="centos-7-qserv"
-
-# Move to openstackclient CLI
-# sudo pip install python-openstackclient
 
 # Delete the previous instances for a new test
 PREVIOUS_INSTANCE_IDS=$(openstack server list | grep "$OS_USERNAME-qserv" | cut -d'|' -f 2)
 # Test PREVIOUS_INSTANCE_IDS 
 if [ "$PREVIOUS_INSTANCE_IDS" ]
 then
+    echo "Delete the previous instances"
 	openstack server delete $PREVIOUS_INSTANCE_IDS
 else
 	echo "No existing servers to delete"
@@ -42,6 +39,7 @@ PREVIOUS_IMAGE_ID=$(openstack image list | grep "$SNAPSHOT_NAME" | cut -d'|' -f 
 # Test PREVIOUS_IMAGE_ID
 if [ "$PREVIOUS_IMAGE_ID" ]
 then
+    echo "Delete the previous image denoted $SNAPSHOT_NAME"
 	openstack image delete $PREVIOUS_IMAGE_ID
 else
 	echo "No existing image denoted $SNAPSHOT_NAME to delete"
@@ -69,9 +67,6 @@ sed -i -e 's/$HOSTNAME_FORMAT/$OS_USERNAME-qserv-%g/g' env.sh
 sed -i -e "s/MASTER_ID=1/MASTER_ID=0/" env.sh
 sed -i -e "s/WORKER_FIRST_ID=2/WORKER_FIRST_ID=1/" env.sh
 sed -i -e "s/WORKER_LAST_ID=3/WORKER_LAST_ID=$NB_SERVERS/" env.sh
-
-# Install shmux before running multi node tests
-# http://web.taranis.org/shmux/
 
 # Run multinode tests
 ./run-multinode-tests.sh

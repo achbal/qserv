@@ -6,8 +6,10 @@ Pre-requisite
 
 #Install the pre-requisite software
 sudo apt-get install python-dev python-pip
+
 #Install the OpenStack client
 pip install python-openstackclient
+
 #Install the nova client
 sudo apt-get install python-novaclient
 
@@ -33,6 +35,9 @@ vi ncsa.conf
 # Update the test file to run
 # by giving the conf file, the snapshot name and number of servers to boot
 vi test.sh
+
+# Install shmux before running multi node tests in test.sh
+# http://web.taranis.org/shmux/
 
 # run test
 ./test.sh

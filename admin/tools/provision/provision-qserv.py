@@ -8,7 +8,7 @@ on virtual machines
 Script performs these tasks:
   - launch instances from image and manage ssh key
   - create gateway vm
-  - check for available floating ip adress
+  - check for available floating ip address
   - add it to gateway
   - create users via cloud-init
   - update /etc/hosts on each VM
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
         cloudManager.manage_ssh_key()
 
-        # Find a floating ip for gateway
+        # Find a floating ip address for gateway
         floating_ip = cloudManager.get_floating_ip()
         if not floating_ip:
             logging.fatal("Unable to add public ip to Qserv gateway")

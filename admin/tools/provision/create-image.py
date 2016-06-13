@@ -8,7 +8,7 @@ Script performs these tasks:
   - launch instance from image
   - install docker via cloud-init
   - create a qserv user
-  - create a snapshot
+  - take a snapshot
   - shut down and delete the instance created
 
 @author  Oualid Achbal, ISIMA student , IN2P3

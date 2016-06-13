@@ -156,7 +156,7 @@ class CloudManager(object):
         while status != 'ACTIVE':
             time.sleep(5)
             status = self.nova.images.get(qserv_image).status
-        logging.info("SUCCESS: Qserv image '{}' created and active".format(self.snapshot_name))
+        logging.info("SUCCESS: Qserv image '{}' is active".format(self.snapshot_name))
 
     def nova_servers_create(self, instance_id, userdata):
         """
@@ -216,21 +216,21 @@ class CloudManager(object):
 
     def get_floating_ip(self):
         """
-        Allocate floating ip to project
+        Allocate floating ip address to project
         """
         i = 0
         floating_ips = self.nova.floating_ips.list()
         floating_ip = None
         floating_ip_pool = self.nova.floating_ip_pools.list()[0].name
 
-        # Check for available public ip in project
+        # Check for available public ip address in project
         while i < len(floating_ips) and floating_ip is None:
             if floating_ips[i].instance_id is None:
                 floating_ip = floating_ips[i]
                 logging.debug('Available floating ip found {}'.format(floating_ip))
             i += 1
 
-        # Check for available public ip in ext-net pool
+        # Check for available public ip adress in ext-net pool
         if floating_ip is None:
             try:
                 logging.debug("Use floating ip pool: {}".format(floating_ip_pool))
