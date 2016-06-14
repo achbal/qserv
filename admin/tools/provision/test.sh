@@ -11,14 +11,18 @@
 set -e
 
 # Source the cloud openrc file
-# . ./LSST-openrc.sh.example
-. ./petasky-openrc.sh.example
+# and choose the configuration file which contains instance parameters
+
+# For NCSA
+. ./LSST-openrc.sh
+CONF_FILE="ncsa.conf"
+
+# For Petasky/Galactica
+# . ./petasky-openrc.sh
+# CONF_FILE="galactica.conf"
 
 # Choose a number of instances to boot
 NB_SERVERS=3
-
-# Choose the cloud conf file which contains instance parameters
-CONF_FILE="galactica.conf.example"
 
 # Choose snapshot name and update the cloud conf file chosen
 SNAPSHOT_NAME="centos-7-qserv"
@@ -55,6 +59,8 @@ python provision-qserv.py -f "$CONF_FILE" -n "$NB_SERVERS" -vv
 
 # Warning : if  multinode tests failed save your ~/.ssh/config
 # your old ~/.ssh/config is in~/.ssh/config.backup
+# Make sure that run-multinode-test dosen't fail in order to save ~/.ssh/config
+
 cp ~/.ssh/config ~/.ssh/config.backup
 
 cp ssh_config ~/.ssh/config
